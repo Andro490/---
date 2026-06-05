@@ -16,6 +16,7 @@
     "@reduxjs/toolkit": "^2.12.0",
     "@stripe/stripe-js": "^9.7.0",
     "@types/crypto-js": "^4.2.2",
+    "@vladmandic/face-api": "^1.7.15",
     "axios": "^1.16.1",
     "crypto-js": "^4.2.0",
     "framer-motion": "^12.40.0",
@@ -30,8 +31,7 @@
     "react-router-dom": "^7.15.1",
     "three": "^0.184.0",
     "xlsx": "^0.18.5",
-    "zod": "^4.4.3",
-    "@vladmandic/face-api": "^1.7.12"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -11,6 +11,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const trackingIntervalRef = useRef<any>(null);
   const faceLostFramesRef = useRef(0);
 
@@ -20,6 +21,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
     const initModelsAndCamera = async () => {
       try {
         setIsInitializing(true);
+        setErrorMsg(null);
         // Load the tiny face detector model from CDN
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
         await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
@@ -30,9 +32,10 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
           videoRef.current.srcObject = stream;
         }
         setHasCameraPermission(true);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Camera access denied or model load failed:", err);
         setHasCameraPermission(false);
+        setErrorMsg(err.name === 'NotAllowedError' ? 'الكاميرا محظورة من المتصفح' : 'حدث خطأ في تحميل الكاميرا');
       } finally {
         setIsInitializing(false);
       }
@@ -89,7 +92,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
       ) : hasCameraPermission === false ? (
         <div className="flex flex-col items-center text-red-400 gap-2 p-2 text-center">
           <CameraOff className="w-6 h-6" />
-          <span className="text-[10px] font-semibold">تأكد من تفعيل الكاميرا</span>
+          <span className="text-[10px] font-bold">{errorMsg || 'الكاميرا محظورة'}</span>
         </div>
       ) : (
         <>
