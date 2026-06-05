@@ -183,7 +183,7 @@ const CoursePlayer = () => {
   };
 
   return (
-    <div className="relative z-10 min-h-screen pt-24 pb-12 px-4 sm:px-6 max-w-7xl mx-auto flex flex-col gap-6 rtl">
+    <div className="relative z-10 min-h-screen pt-16 md:pt-24 pb-12 px-3 sm:px-6 max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 rtl">
       {/* Back to Course details bar */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3">
@@ -219,7 +219,7 @@ const CoursePlayer = () => {
             <>
               {/* Conditional rendering for Quiz vs Video Player */}
               {activeLesson.platformType === 'quiz' || activeLesson.platformType === 'exam' || activeLesson.platformType === 'dictation' ? (
-                <div className="w-full h-[75vh] md:h-auto md:min-h-[500px]">
+                <div className="w-full" style={{ minHeight: 'calc(100dvh - 120px)' }}>
                   <QuizComponent 
                     key={activeLesson.id} 
                     lessonId={activeLesson.id} 

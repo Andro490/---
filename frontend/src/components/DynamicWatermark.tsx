@@ -1,78 +1,74 @@
-import { useEffect, useState, useRef, type FC } from 'react';
+import { useEffect, useRef, type FC } from 'react';
 import { useAppSelector } from '../hooks/redux';
 
+/**
+ * DynamicWatermark — علامة مائية متحركة.
+ * تستخدم useRef + DOM مباشرة بدلاً من useState لتجنب إعادة الـ render المستمرة (60fps)
+ * وبالتالي لا تؤثر على مشغّل الفيديو.
+ */
 const DynamicWatermark: FC = () => {
   const { user } = useAppSelector((state) => state.auth);
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
 
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [velocity, setVelocity] = useState({ dx: 1.5, dy: 1.5 });
+  // استخدام refs للموضع والسرعة — لا state هنا
+  const posRef = useRef({ x: 0, y: 0 });
+  const velRef = useRef({ dx: 1.2, dy: 1.2 });
+  const rafRef = useRef<number>(0);
 
-
-  // Ping-pong animation via requestAnimationFrame for smooth hardware-accelerated movement
   useEffect(() => {
-    let animationFrameId: number;
-
     const animate = () => {
-      if (containerRef.current && textRef.current) {
-        const containerBounds = containerRef.current.getBoundingClientRect();
-        const textBounds = textRef.current.getBoundingClientRect();
-
-        setPosition((prevPos) => {
-          let newX = prevPos.x + velocity.dx;
-          let newY = prevPos.y + velocity.dy;
-          let newDx = velocity.dx;
-          let newDy = velocity.dy;
-
-          // Bounce off Left/Right boundaries
-          if (newX <= 0) {
-            newDx = Math.abs(newDx); // Move right
-            newX = 0;
-          } else if (newX + textBounds.width >= containerBounds.width) {
-            newDx = -Math.abs(newDx); // Move left
-            newX = containerBounds.width - textBounds.width;
-          }
-
-          // Bounce off Top/Bottom boundaries
-          if (newY <= 0) {
-            newDy = Math.abs(newDy); // Move down
-            newY = 0;
-          } else if (newY + textBounds.height >= containerBounds.height) {
-            newDy = -Math.abs(newDy); // Move up
-            newY = containerBounds.height - textBounds.height;
-          }
-
-          // Update velocity only if direction changed
-          if (newDx !== velocity.dx || newDy !== velocity.dy) {
-            setVelocity({ dx: newDx, dy: newDy });
-          }
-
-          return { x: newX, y: newY };
-        });
+      const container = containerRef.current;
+      const text = textRef.current;
+      if (!container || !text) {
+        rafRef.current = requestAnimationFrame(animate);
+        return;
       }
-      animationFrameId = requestAnimationFrame(animate);
+
+      const cW = container.offsetWidth;
+      const cH = container.offsetHeight;
+      const tW = text.offsetWidth;
+      const tH = text.offsetHeight;
+
+      let { x, y } = posRef.current;
+      let { dx, dy } = velRef.current;
+
+      x += dx;
+      y += dy;
+
+      // ارتداد من الحواف
+      if (x <= 0) { dx = Math.abs(dx); x = 0; }
+      else if (x + tW >= cW) { dx = -Math.abs(dx); x = cW - tW; }
+
+      if (y <= 0) { dy = Math.abs(dy); y = 0; }
+      else if (y + tH >= cH) { dy = -Math.abs(dy); y = cH - tH; }
+
+      posRef.current = { x, y };
+      velRef.current = { dx, dy };
+
+      // تحديث DOM مباشرة — لا setState
+      text.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+
+      rafRef.current = requestAnimationFrame(animate);
     };
 
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [velocity]);
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []); // يعمل مرة واحدة فقط
 
-  // Use actual user name and mobile if logged in to track leaked videos
-  const identifier = user ? `${user.name} - ${user.mobile || user.id}` : 'Guest User';
+  const identifier = user
+    ? `${user.name} - ${user.mobile || user.id}`
+    : 'Guest User';
 
   return (
-    <div ref={containerRef} className="absolute inset-0 z-9999 pointer-events-none overflow-hidden">
+    <div ref={containerRef} className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
       <div
         ref={textRef}
         dir="ltr"
-        className="absolute top-0 left-0 font-mono text-slate-900 dark:text-white/20 select-none flex flex-col whitespace-nowrap text-sm sm:text-lg font-bold drop-shadow-md"
-        style={{
-          transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
-          willChange: 'transform'
-        }}
+        className="absolute top-0 left-0 font-mono text-white/20 select-none whitespace-nowrap text-sm sm:text-base font-bold"
+        style={{ willChange: 'transform' }}
       >
-        <span>{identifier}</span>
+        {identifier}
       </div>
     </div>
   );

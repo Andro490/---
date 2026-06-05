@@ -539,7 +539,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
 
   // ─── الاختبار الرئيسي ─────────────────────────────────────────────────────
   return (
-    <div className={`flex flex-col h-full bg-slate-950 rounded-xl overflow-hidden border border-slate-200 dark:border-white/5 shadow-glow-purple relative ${isExam ? 'select-none' : ''}`}>
+    <div className={`flex flex-col min-h-full bg-slate-950 rounded-xl overflow-hidden border border-slate-200 dark:border-white/5 shadow-glow-purple relative ${isExam ? 'select-none' : ''}`}>
 
       {/* ── كاميرا المراقبة ── */}
       {isExam && !isBlocked && !result && !reviewAnswers && quizStarted && (
@@ -632,64 +632,64 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
       )}
 
       {/* Quiz Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-theme-neonCyan">{quiz.title}</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-            يحتوي هذا الاختبار على {quiz.questions.length} أسئلة • درجة النجاح: {quiz.passScore}%
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 px-4 py-3 md:p-6 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base md:text-xl font-bold text-theme-neonCyan truncate">{quiz.title}</h2>
+          <p className="text-slate-600 dark:text-slate-400 text-xs md:text-sm mt-0.5">
+            {quiz.questions.length} أسئلة • درجة النجاح: {quiz.passScore}%
           </p>
         </div>
-        <div className="bg-theme-accent/10 border border-theme-accent/30 text-theme-accent px-4 py-2 rounded-lg text-sm font-bold shrink-0 text-center">
+        <div className="bg-theme-accent/10 border border-theme-accent/30 text-theme-accent px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-bold shrink-0">
           مجاب: {Object.keys(answers).length} / {quiz.questions.length}
         </div>
       </div>
 
       {/* Questions */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-8 custom-scrollbar">
         {quiz.questions.map((q, idx) => (
-          <div key={q.id} className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-5 rounded-2xl">
-            <div className="flex gap-4 mb-5">
-              <span className="shrink-0 w-8 h-8 rounded-full bg-theme-accent text-slate-900 dark:text-white flex items-center justify-center font-bold shadow-lg">
+          <div key={q.id} className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-3 md:p-5 rounded-2xl">
+            <div className="flex gap-3 mb-4">
+              <span className="shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full bg-theme-accent text-slate-900 dark:text-white flex items-center justify-center font-bold shadow-lg text-sm">
                 {idx + 1}
               </span>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white leading-relaxed">{q.questionText}</h3>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-1 block">{q.points} نقاط</span>
+                <h3 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white leading-relaxed">{q.questionText}</h3>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">{q.points} نقاط</span>
               </div>
             </div>
 
             {quiz.type === 'dictation' ? (
-              <div className="pl-12 mt-4">
+              <div className="mt-3">
                 <input
                   type="text"
                   value={(answers[q.id] as string) || ''}
                   onChange={(e) => handleOptionSelect(q.id, e.target.value)}
                   placeholder="اكتب الكلمة بالإنجليزية..."
                   dir="ltr"
-                  className="w-full text-left bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-slate-900 dark:text-white focus:border-theme-neonCyan focus:ring-1 focus:ring-theme-neonCyan transition-all outline-none text-lg font-medium"
+                  className="w-full text-left bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-3 md:p-4 text-slate-900 dark:text-white focus:border-theme-neonCyan focus:ring-1 focus:ring-theme-neonCyan transition-all outline-none text-base md:text-lg font-medium"
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 mt-3">
                 {(q.shuffledOptions || []).map((opt) => {
                   const isSelected = answers[q.id] === opt.originalIndex;
                   return (
                     <button
                       key={opt.originalIndex}
                       onClick={() => handleOptionSelect(q.id, opt.originalIndex)}
-                      className={`text-right p-4 rounded-xl border transition-all duration-300 ${
+                      className={`text-right p-3 md:p-4 rounded-xl border transition-all duration-300 ${
                         isSelected
-                          ? 'bg-theme-accent/20 border-theme-accent text-slate-900 dark:text-white shadow-glow-purple scale-[1.02]'
-                          : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'
+                          ? 'bg-theme-accent/20 border-theme-accent text-slate-900 dark:text-white shadow-glow-purple'
+                          : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-700 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className={`w-4 h-4 md:w-5 md:h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                           isSelected ? 'border-theme-neonCyan bg-theme-neonCyan/20' : 'border-slate-500'
                         }`}>
-                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-theme-neonCyan" />}
+                          {isSelected && <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-theme-neonCyan" />}
                         </div>
-                        <span className="font-medium">{opt.text}</span>
+                        <span className="font-medium text-sm md:text-base">{opt.text}</span>
                       </div>
                     </button>
                   );
@@ -701,12 +701,12 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
       </div>
 
       {/* Footer */}
-      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/5 p-4 flex justify-end">
+      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/5 p-3 md:p-4 flex justify-center md:justify-end">
         <button
           id="submit-quiz-btn"
           onClick={handleSubmit}
           disabled={isSubmitting || Object.keys(answers).length === 0}
-          className="bg-gradient-to-r from-theme-accent to-theme-neonCyan text-slate-900 dark:text-white px-8 py-3 rounded-xl font-bold shadow-glow-cyan hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
+          className="w-full md:w-auto bg-gradient-to-r from-theme-accent to-theme-neonCyan text-slate-900 dark:text-white px-6 md:px-8 py-3 rounded-xl font-bold shadow-glow-cyan hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>
