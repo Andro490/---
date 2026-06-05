@@ -849,7 +849,7 @@ const AdminDashboard = () => {
                     </div>
                     
                     <div className="flex items-center gap-4">
-                      <span className="text-theme-neonCyan font-bold">{course.price} $</span>
+                      <span className="text-theme-neonCyan font-bold">{course.price} ج.م</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

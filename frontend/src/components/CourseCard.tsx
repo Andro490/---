@@ -47,14 +47,11 @@ const CourseCard = ({ course }: CourseCardProps) => {
             {course.lessons?.length || 0} دروس
           </span>
 
-          <span className="flex items-center gap-0.5 font-bold text-sm text-theme-neonCyan">
+          <span className="flex items-center gap-1 font-bold text-sm text-theme-neonCyan">
             {course.price === 0 ? (
               <span className="text-emerald-400 font-bold">مجاني</span>
             ) : (
-              <>
-                <span>{course.price}</span>
-                <DollarSign className="w-3.5 h-3.5 inline" />
-              </>
+              <span>{course.price} ج.م</span>
             )}
           </span>
         </div>
