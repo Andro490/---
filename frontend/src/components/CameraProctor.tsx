@@ -118,9 +118,9 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
 
             const ear = (earLeft + earRight) / 2;
 
-            // تحديد الحالة - زودنا الحساسية شوية
+            // تحديد الحالة - زودنا الحساسية جداً للأسفل
             const headTurned  = yaw > 0.25;
-            const lookingDown = pitch > 0.70;
+            const lookingDown = pitch > 0.62; // نزلنا دي عشان يلقط النزول الخفيف
             const eyesSquint  = ear < 0.22; 
 
             const lookingAway = headTurned || lookingDown || eyesSquint;
