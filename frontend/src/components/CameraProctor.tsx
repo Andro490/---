@@ -122,10 +122,10 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             const faceRatio = faceH / faceWidth;
             const boxRatio = result.detection.box.height / result.detection.box.width;
 
-            // تحديد الحالة - حساسية مفرطة جداً
-            const headTurned  = yaw > 0.10;
-            const lookingDown = boxRatio < 1.15; // لما تبص تحت، طول الوش بيقصر بالنسبة لعرضه
-            const eyesSquint  = ear < 0.22; 
+            // تحديد الحالة - حساسية متوازنة
+            const headTurned  = yaw > 0.22; // يسمح بحركة خفيفة، يمسك الالتفات الواضح
+            const lookingDown = boxRatio < 1.05; // يسمح بالنزول للكيبورد، يمسك النزول الكامل (تحت المكتب)
+            const eyesSquint  = ear < 0.20; 
 
             const lookingAway = headTurned || lookingDown || eyesSquint;
 
@@ -136,13 +136,16 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
               setGazeWarn(false);
             }
 
-            const dir = `y=${yaw.toFixed(2)} p=${pitch.toFixed(2)} b=${boxRatio.toFixed(2)}`;
+            const dir = headTurned  ? `👁 يمين/شمال y=${yaw.toFixed(2)}`
+                      : lookingDown  ? `👇 تحت b=${boxRatio.toFixed(2)}`
+                      : eyesSquint   ? `😑 عين ضيقة e=${ear.toFixed(2)}`
+                      : `✅ طبيعي y=${yaw.toFixed(2)} b=${boxRatio.toFixed(2)}`;
 
             setDebugText(dir);
           }
 
-          // بمجرد ما يلتفت مرة واحدة (فوري) -> تحذير
-          if (missedRef.current >= 1) {
+          // 2 فريم متتالي (~نصف ثانية) لتجنب التحذيرات الخاطئة (Glitches)
+          if (missedRef.current >= 2) {
             const now = Date.now();
             if (now - lastWarnRef.current > 4000) {
               lastWarnRef.current = now;
