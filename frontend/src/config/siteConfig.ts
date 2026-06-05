@@ -65,3 +65,4 @@ export const siteConfig = {
     baseUrl: import.meta.env.VITE_API_URL || "https://ravishing-dedication-production-b753.up.railway.app/api",
   },
 };
+
