@@ -151,14 +151,14 @@ export function useQuizSecurity({
     document.addEventListener('visibilitychange', handleStateChange);
     window.addEventListener('blur', handleStateChange);
     window.addEventListener('focus', handleStateChange);
-    // document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseleave', handleMouseLeave);
     document.addEventListener('mouseenter', handleMouseEnter);
     
     return () => {
       document.removeEventListener('visibilitychange', handleStateChange);
       window.removeEventListener('blur', handleStateChange);
       window.removeEventListener('focus', handleStateChange);
-      // document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseenter', handleMouseEnter);
     };
   }, [evaluateBlockState, enabled]);

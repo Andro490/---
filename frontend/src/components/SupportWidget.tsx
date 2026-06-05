@@ -11,8 +11,6 @@ interface ChatMessage {
 }
 
 export const SupportWidget = () => {
-  return null; // تعطيل مؤقت من أجل الاختبار
-
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
