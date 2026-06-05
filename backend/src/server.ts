@@ -53,18 +53,37 @@ app.use(helmet({
   xssFilter: true
 }));
 
-// ✅ إعدادات الـ CORS للسماح بالفرونت إند الخاص بك فقط
+// ✅ إعدادات الـ CORS — يقبل كل نطاقات Vercel + localhost تلقائياً
+const allowedOrigins = [
+  // ✅ النطاق الإنتاجي الثابت (عدّله إذا غيّرت اسم المشروع)
+  'https://portofa.vercel.app',
+  // ✅ النطاق الجديد (my-frontend-app)
+  'https://my-frontend-app.kappa.vercel.app',
+  // ✅ بيئة التطوير المحلية
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
 app.use(
   cors({
-    origin: [
-      'https://portofa.vercel.app', 
-      'https://portofa-git-main-emelnasr-1066s-projects.vercel.app', 
-      'http://localhost:5173'
-    ], // إضافة رابط الموقع الأساسي، ورابط Vercel الفرعي، و localhost للوقت التطوير
+    origin: (origin, callback) => {
+      // السماح بالطلبات بدون origin (مثل Postman أو server-to-server)
+      if (!origin) return callback(null, true);
+
+      // السماح لأي نطاق فرعي من vercel.app (يشمل Preview URLs)
+      const isVercel = /^https:\/\/[a-zA-Z0-9-]+(\.vercel\.app)$/.test(origin);
+      
+      if (allowedOrigins.includes(origin) || isVercel) {
+        callback(null, true);
+      } else {
+        console.warn(`[CORS] Blocked origin: ${origin}`);
+        callback(new Error(`CORS: Origin ${origin} not allowed`));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Visitor-Id'],
-    credentials: true, // مهم جداً لدعم الكوكيز وإرسال الـ Headers
-    optionsSuccessStatus: 200
+    credentials: true, // مهم جداً لدعم الكوكيز
+    optionsSuccessStatus: 200,
   })
 );
 
