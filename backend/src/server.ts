@@ -54,17 +54,29 @@ app.use(helmet({
 }));
 
 // ✅ إعدادات الـ CORS للسماح بالفرونت إند الخاص بك فقط
+// تم تحديثها لتشمل الـ Frontend المؤقت على Vercel
+const allowedOrigins = [
+  'https://portofa.vercel.app', 
+  'https://portofa-git-main-emelnasr-1066s-projects.vercel.app',
+  'https://your-app.vercel.app', // Frontend المؤقت
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
 app.use(
   cors({
-    origin: [
-      'https://portofa.vercel.app', 
-      'https://portofa-git-main-emelnasr-1066s-projects.vercel.app', 
-      'http://localhost:5173'
-    ], // إضافة رابط الموقع الأساسي، ورابط Vercel الفرعي، و localhost للوقت التطوير
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Visitor-Id'],
     credentials: true, // مهم جداً لدعم الكوكيز وإرسال الـ Headers
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
+    maxAge: 86400
   })
 );
 
@@ -147,3 +159,4 @@ app.listen(PORT, () => {
   console.log(`Health Check: http://localhost:${PORT}/health`);
   console.log(`========================================`);
 });
+
