@@ -149,7 +149,7 @@ export const getQuizByLesson = async (req: Request, res: Response) => {
       submittedAt: Date;
     } | null = null;
 
-    const isExam = quiz.type === 'exam' || quiz.lesson.platformType === 'exam';
+    const isExam = quiz.type === 'exam' || quiz.lesson.platformType === 'exam' || quiz.type === 'dictation' || quiz.lesson.platformType === 'dictation';
 
     if (isExam && userId) {
       const existingResult = await prisma.quizResult.findUnique({
@@ -195,7 +195,7 @@ export const submitQuiz = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    const isExam = quiz.type === 'exam' || quiz.lesson.platformType === 'exam';
+    const isExam = quiz.type === 'exam' || quiz.lesson.platformType === 'exam' || quiz.type === 'dictation' || quiz.lesson.platformType === 'dictation';
 
     // منع إعادة الامتحانات النهائية (أو السماح بالمراجعة فقط)
     let isReviewMode = false;

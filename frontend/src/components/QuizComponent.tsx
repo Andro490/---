@@ -64,7 +64,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
     setLoading(true);
     setError(null);
     setResult(null);
-    setAnswers({});
+    setAnswers(reviewAnswers || {});
     setAlreadyTaken(false);
     setPreviousResult(null);
     try {
@@ -97,7 +97,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
       setQuiz(fetchedQuiz);
       
       // إذا كان الاختبار "عادي" لا نعرض شاشة البداية ونبدأ فوراً
-      if (fetchedQuiz.type !== 'exam' && !reviewAnswers) {
+      if (fetchedQuiz.type !== 'exam' && fetchedQuiz.type !== 'dictation' && !reviewAnswers) {
         setQuizStarted(true);
       }
     } catch (err: any) {
@@ -140,7 +140,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
     await submitQuizData(answers);
   };
 
-  const isExam = quiz?.type === 'exam';
+  const isExam = quiz?.type === 'exam' || quiz?.type === 'dictation';
   
   const { startQuiz, resumeQuiz, isBlocked, switchCount, warningText } = useQuizSecurity({
     onAutoSubmit: autoSubmit,
@@ -206,8 +206,8 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
     );
   }
 
-  // ─── شاشة القفل: الامتحان النهائي مؤدى مسبقاً ────────────────────────────
-  if (alreadyTaken && quiz.type === 'exam' && !reviewAnswers) {
+  // ─── شاشة القفل: الامتحان النهائي أو التسميع مؤدى مسبقاً ────────────────────────────
+  if (alreadyTaken && isExam && !reviewAnswers) {
     const score = previousResult?.scorePercentage ?? 0;
     const passed = previousResult?.passed ?? false;
     const date = previousResult?.submittedAt
@@ -231,7 +231,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
           <h2 className="text-2xl font-bold text-white mb-1">{quiz.title}</h2>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 border border-red-500/30 text-red-400">
             <Lock className="w-3 h-3" />
-            امتحان نهائي — لا يمكن إعادته
+            {quiz.type === 'dictation' ? 'تسميع كلمات — لا يمكن إعادته' : 'امتحان نهائي — لا يمكن إعادته'}
           </span>
         </div>
 
@@ -352,8 +352,8 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
         )}
 
         <div className="mt-8 pt-4 border-t border-slate-300 dark:border-white/10 flex justify-center">
-          {/* زر الإعادة: متاح فقط للكويز العادي (practice) وليس الامتحان النهائي (exam) */}
-          {!reviewAnswers && quiz.type !== 'exam' && (
+          {/* زر الإعادة: متاح فقط للكويز العادي (practice) */}
+          {!reviewAnswers && quiz.type !== 'exam' && quiz.type !== 'dictation' && (
             <button
               onClick={fetchQuiz}
               className="flex items-center gap-2 px-6 py-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-700 text-slate-900 dark:text-white rounded-xl transition-all font-semibold"
@@ -362,11 +362,11 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
               إعادة الاختبار
             </button>
           )}
-          {/* للامتحان النهائي: رسالة قفل */}
-          {!reviewAnswers && quiz.type === 'exam' && result && (
+          {/* للامتحان النهائي والتسميع: رسالة قفل */}
+          {!reviewAnswers && (quiz.type === 'exam' || quiz.type === 'dictation') && result && (
             <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm font-semibold">
               <Lock className="w-4 h-4" />
-              الامتحان النهائي لا يمكن إعادته
+              هذا الاختبار لا يمكن إعادته
             </div>
           )}
         </div>
