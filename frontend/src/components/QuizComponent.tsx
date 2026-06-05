@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { CheckCircle, XCircle, Award, RefreshCw, Maximize, ShieldAlert, Lock, Trophy } from 'lucide-react';
+import { CheckCircle, XCircle, Award, RefreshCw, Maximize, ShieldAlert, Lock, Trophy, Clock } from 'lucide-react';
 import { useQuizSecurity } from '../hooks/useQuizSecurity';
 
 interface Question {
@@ -59,6 +59,9 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
   // ─── حالة بدء الاختبار ───────────────────────────────────────────────────
   // في وضع المراجعة نتجاوز شاشة البداية مباشرةً
   const [quizStarted, setQuizStarted] = useState(!!reviewAnswers);
+  
+  // ─── المؤقت ─────────────────────────────────────────────────────────────
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const fetchQuiz = async () => {
     setLoading(true);
@@ -154,7 +157,27 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
       startQuiz();         // يفتح ملء الشاشة ويبدأ المراقبة
     }
     setQuizStarted(true);
+    // تفعيل المؤقت فقط في حالة تسميع الكلمات بـ 10 دقائق (600 ثانية)
+    if (quiz?.type === 'dictation') {
+      setTimeLeft(10 * 60);
+    }
   };
+
+  // معالجة المؤقت
+  useEffect(() => {
+    if (timeLeft === null || result || reviewAnswers || !quizStarted) return;
+
+    if (timeLeft <= 0) {
+      autoSubmit();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, result, reviewAnswers, quizStarted]);
 
   // If we are in review mode (reviewAnswers provided), we want to submit the answers 
   // immediately after loading the quiz to get the correct results.
@@ -388,6 +411,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
           <h2 className="text-2xl font-bold text-white mb-1">{quiz.title}</h2>
           <p className="text-slate-400 text-sm">
             {quiz.questions.length} أسئلة • درجة النجاح: {quiz.passScore}%
+            {quiz.type === 'dictation' && ' • مدة الاختبار: 10 دقائق'}
           </p>
         </div>
 
@@ -447,26 +471,46 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
         </div>
       )}
 
-      {/* ── شريط حالة الأمان ── */}
-      {isExam && (
+      {/* ── شريط حالة الأمان والمؤقت ── */}
+      {(isExam || timeLeft !== null) && (
         <div className="bg-slate-900/90 backdrop-blur border-b border-white/5 px-4 py-2 flex items-center justify-between gap-3 text-xs" dir="rtl">
-          {/* حالة المراقبة */}
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <ShieldAlert className="w-3 h-3" />
-            المراقبة نشطة
-          </span>
+          <div className="flex items-center gap-3">
+            {/* حالة المراقبة */}
+            {isExam && (
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <ShieldAlert className="w-3 h-3" />
+                المراقبة نشطة
+              </span>
+            )}
+            
+            {/* مؤقت التسميع */}
+            {timeLeft !== null && (
+              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-medium tracking-widest ${
+                timeLeft < 60 
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/50 animate-pulse' 
+                  : 'bg-theme-neonCyan/10 text-theme-neonCyan border border-theme-neonCyan/30'
+              }`}>
+                <Clock className="w-3 h-3" />
+                <span className="font-mono text-[14px]">
+                  {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+                </span>
+              </span>
+            )}
+          </div>
 
           {/* عداد التبديل */}
-          <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-medium ${
-            switchCount === 0
-              ? 'bg-slate-800 text-slate-400 border border-white/5'
-              : switchCount >= 2
-              ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
-              : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-          }`}>
-            <ShieldAlert className="w-3 h-3" />
-            تحذيرات: {switchCount} / 3
-          </span>
+          {isExam && (
+            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-medium ${
+              switchCount === 0
+                ? 'bg-slate-800 text-slate-400 border border-white/5'
+                : switchCount >= 2
+                ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
+                : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+            }`}>
+              <ShieldAlert className="w-3 h-3" />
+              تحذيرات: {switchCount} / 3
+            </span>
+          )}
         </div>
       )}
 
