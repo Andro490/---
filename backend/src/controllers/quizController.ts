@@ -50,6 +50,15 @@ export const uploadQuizExcel = async (req: Request, res: Response) => {
 
     // تنسيق الأسئلة
     const questions = rawData.map((row: any) => {
+      if (row.Answer !== undefined) {
+        return {
+          questionText: String(row.Question || 'بدون سؤال'),
+          options: [String(row.Answer)],
+          correctOption: 0,
+          points: Number(row.Points) || 1,
+        };
+      }
+
       const options = [row.Option1, row.Option2, row.Option3, row.Option4]
         .filter(Boolean)
         .map(String);
@@ -83,7 +92,7 @@ export const uploadQuizExcel = async (req: Request, res: Response) => {
       data: {
         title: title || 'اختبار الدرس',
         passScore: Number(passScore) || 50,
-        type: lesson.platformType === 'exam' ? 'exam' : 'practice',
+        type: lesson.platformType === 'exam' ? 'exam' : lesson.platformType === 'dictation' ? 'dictation' : 'practice',
         lessonId,
         questions: {
           create: questions,
@@ -156,8 +165,9 @@ export const getQuizByLesson = async (req: Request, res: Response) => {
       }
     }
 
-    // Override quiz type for frontend if lesson is exam
+    // Override quiz type for frontend if lesson is exam or dictation
     if (isExam) quiz.type = 'exam';
+    if (quiz.lesson.platformType === 'dictation') quiz.type = 'dictation';
 
     res.status(200).json({ quiz, alreadyTaken, previousResult });
   } catch (error: any) {
@@ -206,7 +216,14 @@ export const submitQuiz = async (req: Request, res: Response) => {
     const results = quiz.questions.map((q) => {
       totalPoints += q.points;
       const selectedOption = answers[q.id];
-      const isCorrect = selectedOption === q.correctOption;
+      let isCorrect = false;
+
+      if (quiz.type === 'dictation') {
+        isCorrect = String(selectedOption || '').toLowerCase().trim() === String(q.options[0] || '').toLowerCase().trim();
+      } else {
+        isCorrect = selectedOption === q.correctOption;
+      }
+
       if (isCorrect) earnedPoints += q.points;
       
       return {

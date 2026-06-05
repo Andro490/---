@@ -15,7 +15,7 @@ interface Quiz {
   id: string;
   title: string;
   passScore: number;
-  type?: 'practice' | 'exam'; // نوع الاختبار
+  type?: 'practice' | 'exam' | 'dictation'; // نوع الاختبار
   questions: Question[];
 }
 
@@ -40,7 +40,7 @@ interface PreviousResult {
 interface QuizComponentProps {
   lessonId: string;
   onQuizComplete?: () => void;
-  reviewAnswers?: Record<string, number>;
+  reviewAnswers?: Record<string, number | string>;
 }
 
 const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponentProps) => {
@@ -52,7 +52,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
   const [alreadyTaken, setAlreadyTaken] = useState(false);
   const [previousResult, setPreviousResult] = useState<PreviousResult | null>(null);
 
-  const [answers, setAnswers] = useState<Record<string, number>>(reviewAnswers || {});
+  const [answers, setAnswers] = useState<Record<string, number | string>>(reviewAnswers || {});
   const [isSubmitting, setIsSubmitting] = useState(!!reviewAnswers);
   const [result, setResult] = useState<QuizResult | null>(null);
 
@@ -111,7 +111,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
     fetchQuiz();
   }, [lessonId]);
 
-  const submitQuizData = async (answersToSubmit: Record<string, number>) => {
+  const submitQuizData = async (answersToSubmit: Record<string, number | string>) => {
     if (!quiz) return;
     setIsSubmitting(true);
     try {
@@ -164,11 +164,11 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
     }
   }, [quiz]);
 
-  const handleOptionSelect = (questionId: string, optionIndex: number) => {
+  const handleOptionSelect = (questionId: string, value: number | string) => {
     if (result) return; // Prevent changing answer after submit
     setAnswers((prev) => ({
       ...prev,
-      [questionId]: optionIndex
+      [questionId]: value
     }));
   };
 
@@ -295,24 +295,45 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
                     <p className="text-slate-900 dark:text-white font-medium">{q.questionText}</p>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-9">
-                    {q.options.map((opt, optIdx) => {
-                      const isSelected = answers[q.id] === optIdx;
-                      const isActualCorrect = answerRes?.correctOption === optIdx;
-                      
-                      let bgClass = "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400";
-                      if (isActualCorrect) bgClass = "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 font-bold";
-                      else if (isSelected && !isActualCorrect) bgClass = "bg-red-500/20 border-red-500/50 text-red-400";
-                      
-                      return (
-                        <div key={optIdx} className={`p-2.5 rounded-lg border text-sm flex items-center justify-between ${bgClass}`}>
-                          <span>{opt}</span>
-                          {isActualCorrect && <CheckCircle className="w-4 h-4 text-emerald-400" />}
-                          {isSelected && !isActualCorrect && <XCircle className="w-4 h-4 text-red-400" />}
+                  {quiz.type === 'dictation' ? (
+                    <div className="pl-9 mt-3 flex flex-col gap-2">
+                      <div className={`p-3 rounded-xl border flex items-center justify-between text-sm ${isCorrect ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-500 dark:text-slate-400 text-xs">إجابتك:</span>
+                          <span className={`font-bold ${isCorrect ? 'text-emerald-400' : 'text-red-400'}`}>{answers[q.id] || 'بدون إجابة'}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        {isCorrect ? <CheckCircle className="w-5 h-5 text-emerald-400" /> : <XCircle className="w-5 h-5 text-red-400" />}
+                      </div>
+                      {!isCorrect && (
+                        <div className="p-3 rounded-xl border bg-emerald-500/10 border-emerald-500/30 flex items-center justify-between text-sm">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-slate-500 dark:text-slate-400 text-xs">الإجابة الصحيحة:</span>
+                            <span className="font-bold text-emerald-400">{q.options[0]}</span>
+                          </div>
+                          <CheckCircle className="w-5 h-5 text-emerald-400" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-9 mt-3">
+                      {q.options.map((opt, optIdx) => {
+                        const isSelected = answers[q.id] === optIdx;
+                        const isActualCorrect = answerRes?.correctOption === optIdx;
+                        
+                        let bgClass = "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400";
+                        if (isActualCorrect) bgClass = "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 font-bold";
+                        else if (isSelected && !isActualCorrect) bgClass = "bg-red-500/20 border-red-500/50 text-red-400";
+                        
+                        return (
+                          <div key={optIdx} className={`p-2.5 rounded-lg border text-sm flex items-center justify-between ${bgClass}`}>
+                            <span>{opt}</span>
+                            {isActualCorrect && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                            {isSelected && !isActualCorrect && <XCircle className="w-4 h-4 text-red-400" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -476,31 +497,44 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
-              {(q.shuffledOptions || []).map((opt) => {
-                const isSelected = answers[q.id] === opt.originalIndex;
-                return (
-                  <button
-                    key={opt.originalIndex}
-                    onClick={() => handleOptionSelect(q.id, opt.originalIndex)}
-                    className={`text-right p-4 rounded-xl border transition-all duration-300 ${
-                      isSelected
-                        ? 'bg-theme-accent/20 border-theme-accent text-slate-900 dark:text-white shadow-glow-purple scale-[1.02]'
-                        : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected ? 'border-theme-neonCyan bg-theme-neonCyan/20' : 'border-slate-500'
-                      }`}>
-                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-theme-neonCyan" />}
+            {quiz.type === 'dictation' ? (
+              <div className="pl-12 mt-4">
+                <input
+                  type="text"
+                  value={(answers[q.id] as string) || ''}
+                  onChange={(e) => handleOptionSelect(q.id, e.target.value)}
+                  placeholder="اكتب الكلمة بالإنجليزية..."
+                  dir="ltr"
+                  className="w-full text-left bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-slate-900 dark:text-white focus:border-theme-neonCyan focus:ring-1 focus:ring-theme-neonCyan transition-all outline-none text-lg font-medium"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-12">
+                {(q.shuffledOptions || []).map((opt) => {
+                  const isSelected = answers[q.id] === opt.originalIndex;
+                  return (
+                    <button
+                      key={opt.originalIndex}
+                      onClick={() => handleOptionSelect(q.id, opt.originalIndex)}
+                      className={`text-right p-4 rounded-xl border transition-all duration-300 ${
+                        isSelected
+                          ? 'bg-theme-accent/20 border-theme-accent text-slate-900 dark:text-white shadow-glow-purple scale-[1.02]'
+                          : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          isSelected ? 'border-theme-neonCyan bg-theme-neonCyan/20' : 'border-slate-500'
+                        }`}>
+                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-theme-neonCyan" />}
+                        </div>
+                        <span className="font-medium">{opt.text}</span>
                       </div>
-                      <span className="font-medium">{opt.text}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
       </div>

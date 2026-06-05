@@ -56,7 +56,7 @@ const CoursePlayer = () => {
         if (targetIdx <= 0) return false;
         for (let i = 0; i < targetIdx; i++) {
           const prev = currentCourse.lessons![i];
-          if ((prev.platformType === 'quiz' || prev.platformType === 'exam' || prev.platformType === 'homework') && !isLessonCompleted(prev.id)) {
+          if ((prev.platformType === 'quiz' || prev.platformType === 'exam' || prev.platformType === 'dictation' || prev.platformType === 'homework') && !isLessonCompleted(prev.id)) {
             return true;
           }
         }
@@ -106,7 +106,7 @@ const CoursePlayer = () => {
       if (targetIdx > 0) {
         for (let i = 0; i < targetIdx; i++) {
           const prev = currentCourse.lessons[i];
-          if ((prev.platformType === 'quiz' || prev.platformType === 'exam' || prev.platformType === 'homework') && !isLessonCompleted(prev.id)) {
+          if ((prev.platformType === 'quiz' || prev.platformType === 'exam' || prev.platformType === 'dictation' || prev.platformType === 'homework') && !isLessonCompleted(prev.id)) {
             alert('🔒 عذراً، لا يمكنك فتح هذا الدرس. يجب عليك أولاً اجتياز الاختبار/الواجب السابق بنسبة نجاح 50% على الأقل.');
             return;
           }
@@ -139,7 +139,7 @@ const CoursePlayer = () => {
     let timer: ReturnType<typeof setTimeout>;
 
     // ✅ الإكمال التلقائي فقط لدروس الفيديو — الكويزات والواجبات تُكتمل فقط بعد التسليم الناجح
-    const isInteractiveLesson = activeLesson?.platformType === 'quiz' || activeLesson?.platformType === 'exam' || activeLesson?.platformType === 'homework';
+    const isInteractiveLesson = activeLesson?.platformType === 'quiz' || activeLesson?.platformType === 'exam' || activeLesson?.platformType === 'dictation' || activeLesson?.platformType === 'homework';
 
     if (activeLesson && id && progress && progress.progressList && !isInteractiveLesson) {
       const isCompleted = progress.progressList.find(p => p.lessonId === activeLesson.id)?.completed;
@@ -218,7 +218,7 @@ const CoursePlayer = () => {
           {activeLesson ? (
             <>
               {/* Conditional rendering for Quiz vs Video Player */}
-              {activeLesson.platformType === 'quiz' || activeLesson.platformType === 'exam' ? (
+              {activeLesson.platformType === 'quiz' || activeLesson.platformType === 'exam' || activeLesson.platformType === 'dictation' ? (
                 <div className="w-full aspect-video md:aspect-auto md:min-h-[500px]">
                   <QuizComponent 
                     key={activeLesson.id} 
@@ -302,7 +302,7 @@ const CoursePlayer = () => {
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">{activeLesson.title}</h2>
 
                   {/* للكويزات والواجبات: شارة قراءة فقط بدون زر ضغط */}
-                  {(activeLesson.platformType === 'quiz' || activeLesson.platformType === 'exam' || activeLesson.platformType === 'homework') ? (
+                  {(activeLesson.platformType === 'quiz' || activeLesson.platformType === 'exam' || activeLesson.platformType === 'dictation' || activeLesson.platformType === 'homework') ? (
                     isLessonCompleted(activeLesson.id) ? (
                       <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
                         <CheckCircle className="w-3.5 h-3.5 fill-emerald-500/20" />
@@ -315,7 +315,7 @@ const CoursePlayer = () => {
                           : 'bg-theme-neonPurple/10 border-theme-neonPurple/30 text-theme-neonPurple'
                       }`}>
                         <Circle className="w-3.5 h-3.5" />
-                        {activeLesson.platformType === 'homework' ? 'يتطلب تسليم الواجب' : 'يتطلب اجتياز الاختبار'}
+                        {activeLesson.platformType === 'homework' ? 'يتطلب تسليم الواجب' : activeLesson.platformType === 'dictation' ? 'يتطلب إتمام التسميع' : 'يتطلب اجتياز الاختبار'}
                       </span>
                     )
                   ) : (
@@ -373,7 +373,7 @@ const CoursePlayer = () => {
               // تحديد ما إذا كان الدرس مغلقاً بسبب اختبار لم يتم اجتيازه
               let isLocked = false;
               for (let i = 0; i < idx; i++) {
-                if ((lessons[i].platformType === 'quiz' || lessons[i].platformType === 'exam' || lessons[i].platformType === 'homework') && !isLessonCompleted(lessons[i].id)) {
+                if ((lessons[i].platformType === 'quiz' || lessons[i].platformType === 'exam' || lessons[i].platformType === 'dictation' || lessons[i].platformType === 'homework') && !isLessonCompleted(lessons[i].id)) {
                   isLocked = true;
                   break;
                 }
@@ -398,7 +398,7 @@ const CoursePlayer = () => {
 
                   {isLocked ? (
                     <Lock className="w-4 h-4 text-red-500/50" />
-                  ) : (lesson.platformType === 'quiz' || lesson.platformType === 'exam' || lesson.platformType === 'homework') ? (
+                  ) : (lesson.platformType === 'quiz' || lesson.platformType === 'exam' || lesson.platformType === 'dictation' || lesson.platformType === 'homework') ? (
                     /* للكويزات والواجبات: أيقونة قراءة فقط بدون إمكانية الضغط */
                     isDone ? (
                       <CheckCircle className="w-4 h-4 text-emerald-400 fill-emerald-500/10" />
@@ -408,7 +408,7 @@ const CoursePlayer = () => {
                           ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
                           : 'text-theme-neonPurple border-theme-neonPurple/30 bg-theme-neonPurple/10'
                       }`}>
-                        {lesson.platformType === 'homework' ? 'واجب' : lesson.platformType === 'exam' ? 'نهائي' : 'كويز'}
+                        {lesson.platformType === 'homework' ? 'واجب' : lesson.platformType === 'exam' ? 'نهائي' : lesson.platformType === 'dictation' ? 'تسميع' : 'كويز'}
                       </span>
                     )
                   ) : (

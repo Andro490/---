@@ -315,7 +315,7 @@ const AdminDashboard = () => {
         courseId: lessonCourseId,
         title: lessonTitle,
         content: lessonContent || undefined,
-        videoUrl: (lessonPlatformType === 'quiz' || lessonPlatformType === 'exam' || lessonPlatformType === 'homework' || lessonPlatformType === 'pdf') ? undefined : (lessonVideo || undefined),
+        videoUrl: (lessonPlatformType === 'quiz' || lessonPlatformType === 'exam' || lessonPlatformType === 'dictation' || lessonPlatformType === 'homework' || lessonPlatformType === 'pdf') ? undefined : (lessonVideo || undefined),
         pdfUrl: pdfUrl || undefined,
         platformType: lessonPlatformType,
         libraryId: lessonPlatformType === 'secure' && lessonLibraryId ? lessonLibraryId : undefined,
@@ -324,8 +324,8 @@ const AdminDashboard = () => {
         order: parseInt(lessonOrder),
       });
 
-      // If it's a quiz or exam, upload the file
-      if ((lessonPlatformType === 'quiz' || lessonPlatformType === 'exam') && quizFile) {
+      // If it's a quiz or exam or dictation, upload the file
+      if ((lessonPlatformType === 'quiz' || lessonPlatformType === 'exam' || lessonPlatformType === 'dictation') && quizFile) {
         const lessonId = res.data?.id;
         console.log('=== Quiz Upload Debug ===');
         console.log('Full res.data:', res.data);
@@ -887,7 +887,7 @@ const AdminDashboard = () => {
                               <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                                 lesson.platformType === 'secure' ? 'bg-theme-neonPurple/20 text-theme-neonPurple' :
                                 lesson.platformType === 'pdf' ? 'bg-blue-500/20 text-blue-400' :
-                                lesson.platformType === 'quiz' || lesson.platformType === 'exam' ? 'bg-amber-500/20 text-amber-400' :
+                                lesson.platformType === 'quiz' || lesson.platformType === 'exam' || lesson.platformType === 'dictation' ? 'bg-amber-500/20 text-amber-400' :
                                 lesson.platformType === 'homework' ? 'bg-green-500/20 text-green-400' :
                                 'bg-rose-500/20 text-rose-400'
                               }`}>
@@ -895,6 +895,7 @@ const AdminDashboard = () => {
                                  lesson.platformType === 'pdf' ? 'PDF' :
                                  lesson.platformType === 'quiz' ? 'اختبار' :
                                  lesson.platformType === 'exam' ? 'اختبار نهائي' :
+                                 lesson.platformType === 'dictation' ? 'تسميع كلمات' :
                                  lesson.platformType === 'homework' ? 'واجب' : 'يوتيوب'}
                               </span>
                             </div>
@@ -992,6 +993,7 @@ const AdminDashboard = () => {
                   <option value="pdf">📄 رفع محاضرات (PDF)</option>
                   <option value="quiz">اختبار (Quiz Excel)</option>
                   <option value="exam">اختبار نهائي (Exam Excel)</option>
+                  <option value="dictation">تسميع كلمات (Dictation Excel)</option>
                   <option value="homework">واجب (Homework Excel)</option>
                 </select>
               </div>
@@ -1023,7 +1025,7 @@ const AdminDashboard = () => {
               )}
 
               {/* Quiz and Exam Upload Section */}
-              {(lessonPlatformType === 'quiz' || lessonPlatformType === 'exam') && (
+              {(lessonPlatformType === 'quiz' || lessonPlatformType === 'exam' || lessonPlatformType === 'dictation') && (
                 <div className="col-span-1 sm:col-span-2 space-y-1.5 p-4 border border-dashed border-theme-neonCyan rounded-xl bg-theme-neonCyan/5">
                   <label className="text-theme-neonCyan text-xs font-semibold">ارفع ملف الأسئلة (Excel)</label>
                   <input
@@ -1033,7 +1035,7 @@ const AdminDashboard = () => {
                     className="w-full text-slate-600 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-theme-neonCyan/20 file:text-theme-neonCyan hover:file:bg-theme-neonCyan/30 cursor-pointer"
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-400 mt-1">
-                    يجب أن يحتوي الملف على الأعمدة: Question, Option1, Option2, Option3, Option4, CorrectOption, Points
+                    {lessonPlatformType === 'dictation' ? 'يجب أن يحتوي الملف على الأعمدة: Question, Answer, Points' : 'يجب أن يحتوي الملف على الأعمدة: Question, Option1, Option2, Option3, Option4, CorrectOption, Points'}
                   </p>
                   
                   {quizPreview.length > 0 && (
@@ -1071,7 +1073,7 @@ const AdminDashboard = () => {
               )}
             </div>
 
-            {lessonPlatformType !== 'quiz' && lessonPlatformType !== 'exam' && lessonPlatformType !== 'homework' && lessonPlatformType !== 'pdf' && (
+            {lessonPlatformType !== 'quiz' && lessonPlatformType !== 'exam' && lessonPlatformType !== 'dictation' && lessonPlatformType !== 'homework' && lessonPlatformType !== 'pdf' && (
               <div className="space-y-1.5">
                 <label className="text-slate-600 dark:text-slate-400 text-xs font-semibold">
                   {lessonPlatformType === 'secure' ? 'معرف الفيديو (Video ID/GUID)' : 'رابط الفيديو (YouTube)'}
@@ -1292,7 +1294,7 @@ const AdminDashboard = () => {
                 <option value="">— اختر درساً —</option>
                 {coursesList
                   .find(c => c.id === lessonCourseId)
-                  ?.lessons.filter((l: any) => l.platformType === 'quiz' || l.platformType === 'exam')
+                  ?.lessons.filter((l: any) => l.platformType === 'quiz' || l.platformType === 'exam' || l.platformType === 'dictation')
                   .map((l: any) => (
                     <option key={l.id} value={l.id}>{l.title || l.id}</option>
                   ))}
@@ -1321,9 +1323,9 @@ const AdminDashboard = () => {
                   <h3 className="text-lg font-bold text-white">{examResultsData.quiz.title}</h3>
                   <div className="flex items-center gap-3 mt-1">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                      examResultsData.quiz.type === 'exam' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                      examResultsData.quiz.type === 'exam' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : examResultsData.quiz.type === 'dictation' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                     }`}>
-                      {examResultsData.quiz.type === 'exam' ? 'امتحان نهائي' : 'تدريبي'}
+                      {examResultsData.quiz.type === 'exam' ? 'امتحان نهائي' : examResultsData.quiz.type === 'dictation' ? 'تسميع كلمات' : 'تدريبي'}
                     </span>
                     <span className="text-xs text-slate-400">عدد الطلاب: <strong className="text-white">{examResultsData.results.length}</strong></span>
                     <span className="text-xs text-slate-400">درجة النجاح: <strong className="text-amber-400">{examResultsData.quiz.passScore}%</strong></span>
