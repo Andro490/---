@@ -100,29 +100,25 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
           } else {
             const pts = result.landmarks.positions;
 
-            // ── حساب اتجاه الأنف (لمعرفة الالتفات يمين وشمال) ──
-            const noseLeft   = pts[31].x; // الفتحة الشمال
-            const noseRight  = pts[35].x; // الفتحة اليمين
-            const noseTipX   = pts[30].x; // أرنبة الأنف
-            const noseWidth  = noseRight - noseLeft;
-            const noseCenter = (noseLeft + noseRight) / 2;
-            
-            // نسبة انحراف أرنبة الأنف عن المركز (0 = مستقيم، 1 = أرنبة الأنف فوق الفتحة بالظبط)
-            const noseTurn = Math.abs(noseTipX - noseCenter) / (noseWidth / 2);
+            // 1. حساب زاوية الالتفات (Yaw) - للـ 45 درجة يمين أو شمال
+            const noseTip = pts[30];
+            const faceLeft = pts[0];
+            const faceRight = pts[16];
+            const noseToLeft = noseTip.x - faceLeft.x;
+            const noseToRight = faceRight.x - noseTip.x;
+            const yawRatio = Math.abs(noseToLeft - noseToRight) / (noseToLeft + noseToRight);
+            const headTurned = yawRatio > 0.45; // 0.45 تقريباً تقابل زاوية 45 درجة
 
-            // ── حساب نسب الوجه ككل (لمعرفة الميل للأسفل) ──
-            const faceH = pts[8].y - pts[27].y;
-            const faceWidth = pts[16].x - pts[0].x;
-            const boxRatio = result.detection.box.height / result.detection.box.width;
-
-            // تحديد الحالة - حساسية مبنية على الأنف (زي ما طلبت)
-            const headTurned  = noseTurn > 0.85; // لو أرنبة الأنف عدت الفتحة (باين فتحة واحدة)
+            // 2. حساب زاوية النظر للأسفل (Pitch) - للـ 90 درجة للأسفل
+            const eyeCenterY = (pts[37].y + pts[44].y) / 2;
+            const noseY = pts[30].y;
+            const chinY = pts[8].y;
+            const pitch = (noseY - eyeCenterY) / (chinY - eyeCenterY);
+            const lookingDown = pitch > 0.8; // قيمة 0.8 تدل على نظر الطالب للأسفل بزاوية حادة
             
             // السماح بالنزول لو بيكتب على الكيبورد (خلال آخر 10 ثواني)
             const isTyping = Date.now() - lastTypingTimeRef.current < 10000;
-            const lookingDown = !isTyping && (boxRatio < 0.95); 
-
-            const lookingAway = headTurned || lookingDown;
+            const lookingAway = (headTurned || lookingDown) && !isTyping;
 
             if (lookingAway) {
               missedRef.current += 1;
@@ -131,10 +127,10 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
               setGazeWarn(false);
             }
 
-            const dir = headTurned  ? `👁 يمين/شمال n=${noseTurn.toFixed(2)}`
-                      : lookingDown  ? `👇 تحت b=${boxRatio.toFixed(2)}`
-                      : isTyping && (boxRatio < 0.95) ? `⌨️ يكتب الآن`
-                      : `✅ طبيعي n=${noseTurn.toFixed(2)} b=${boxRatio.toFixed(2)}`;
+            const dir = headTurned  ? `👁 يمين/شمال y=${yawRatio.toFixed(2)}`
+                      : lookingDown && !isTyping ? `👇 تحت p=${pitch.toFixed(2)}`
+                      : isTyping && lookingDown ? `⌨️ يكتب الآن p=${pitch.toFixed(2)}`
+                      : `✅ طبيعي y=${yawRatio.toFixed(2)} p=${pitch.toFixed(2)}`;
 
             setDebugText(dir);
           }
