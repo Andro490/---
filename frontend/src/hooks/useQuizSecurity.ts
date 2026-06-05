@@ -40,6 +40,10 @@ interface UseQuizSecurityReturn {
   warningText: string;
   /** إعادة محاولة دخول ملء الشاشة لإخفاء الـ Overlay */
   resumeQuiz: () => void;
+  /** عدد مرات الابتعاد عن الشاشة (الماوس خارج النافذة) */
+  lookAwayCount: number;
+  /** استدعاء لزيادة عداد تشتت الانتباه يدوياً (مثلاً من الكاميرا) */
+  triggerLookAwayWarning: () => void;
 }
 
 // ─── الـ Hook الرئيسي ────────────────────────────────────────────────────────
@@ -52,11 +56,13 @@ export function useQuizSecurity({
 
   const [isBlocked, setIsBlocked]     = useState(false);
   const [switchCount, setSwitchCount] = useState(0);
+  const [lookAwayCount, setLookAwayCount] = useState(0);
   const [warningText, setWarningText] = useState('');
 
   // Refs — نقرأ منها داخل event listeners بدون إعادة تسجيلها
   const isBlockedRef       = useRef(false);
   const switchCountRef     = useRef(0);
+  const lookAwayCountRef   = useRef(0);
   const isQuizActiveRef    = useRef(false);
   const onAutoSubmitRef    = useRef(onAutoSubmit);
   const autoSubmitCalledRef = useRef(false); // منع التسليم المزدوج
@@ -128,18 +134,32 @@ export function useQuizSecurity({
     const handleStateChange = () => {
       if (!isQuizActiveRef.current) return;
       evaluateBlockState();
+    };
 
-      // لا نقوم بإعادة ملء الشاشة لأنه تم إزالة هذه الخاصية
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (!isQuizActiveRef.current || !enabled) return;
+      // نتحقق أن الماوس خرج فعلاً من النافذة
+      if (e.clientY <= 0 || e.clientX <= 0 || (e.clientX >= window.innerWidth || e.clientY >= window.innerHeight)) {
+        triggerLookAwayWarning();
+      }
+    };
+
+    const handleMouseEnter = () => {
+      // لا نزيل الحجب تلقائياً لتنبيه الطالب، بل يجب عليه الضغط على "العودة للاختبار"
     };
 
     document.addEventListener('visibilitychange', handleStateChange);
     window.addEventListener('blur', handleStateChange);
     window.addEventListener('focus', handleStateChange);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
     
     return () => {
       document.removeEventListener('visibilitychange', handleStateChange);
       window.removeEventListener('blur', handleStateChange);
       window.removeEventListener('focus', handleStateChange);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
     };
   }, [evaluateBlockState, enabled]);
 
@@ -194,12 +214,44 @@ export function useQuizSecurity({
 
   const startQuiz = useCallback(() => {
     switchCountRef.current    = 0;
+    lookAwayCountRef.current  = 0;
     autoSubmitCalledRef.current = false;
     isQuizActiveRef.current   = true;
     isBlockedRef.current      = false;
     setSwitchCount(0);
+    setLookAwayCount(0);
     setIsBlocked(false);
     setWarningText('');
+  }, []);
+
+  const triggerLookAwayWarning = useCallback(() => {
+    if (!isQuizActiveRef.current || isBlockedRef.current) return;
+    
+    isBlockedRef.current = true;
+    setIsBlocked(true);
+
+    const newLookAwayCount = lookAwayCountRef.current + 1;
+    lookAwayCountRef.current = newLookAwayCount;
+    setLookAwayCount(newLookAwayCount);
+
+    if (newLookAwayCount >= 3) {
+      setWarningText(
+        `⛔ لقد قمت بإبعاد نظرك عن الشاشة الحد الأقصى المسموح به (3 مرات)\n` +
+        `سيتم تسليم اختبارك تلقائياً خلال ثانيتين...`
+      );
+      if (!autoSubmitCalledRef.current) {
+        autoSubmitCalledRef.current = true;
+        isQuizActiveRef.current = false;
+        setTimeout(() => onAutoSubmitRef.current(), 2000);
+      }
+    } else {
+      const remaining = 3 - newLookAwayCount;
+      setWarningText(
+        `👀 ركز في الشاشة!\n` +
+        `لقد قمت بإبعاد الماوس/نظرك عن نافذة الاختبار.\n` +
+        `(متبقي: ${remaining} ${remaining === 1 ? 'محاولة' : 'محاولات'})`
+      );
+    }
   }, []);
 
   const resumeQuiz = useCallback(() => {
@@ -208,5 +260,5 @@ export function useQuizSecurity({
     setWarningText('');
   }, []);
 
-  return { startQuiz, resumeQuiz, isBlocked, switchCount, warningText };
+  return { startQuiz, resumeQuiz, isBlocked, switchCount, lookAwayCount, warningText, triggerLookAwayWarning };
 }

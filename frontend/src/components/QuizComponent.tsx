@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { CheckCircle, XCircle, Award, RefreshCw, Maximize, ShieldAlert, Lock, Trophy, Clock } from 'lucide-react';
 import { useQuizSecurity } from '../hooks/useQuizSecurity';
+import CameraProctor from './CameraProctor';
 
 interface Question {
   id: string;
@@ -145,7 +146,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
 
   const isExam = quiz?.type === 'exam' || quiz?.type === 'dictation';
   
-  const { startQuiz, resumeQuiz, isBlocked, switchCount, warningText } = useQuizSecurity({
+  const { startQuiz, resumeQuiz, isBlocked, switchCount, lookAwayCount, warningText, triggerLookAwayWarning } = useQuizSecurity({
     onAutoSubmit: autoSubmit,
     switchLimit: 3,
     enabled: isExam, // تفعيل الحماية فقط في الاختبار النهائي
@@ -444,6 +445,11 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
   return (
     <div className={`flex flex-col h-full bg-slate-950 rounded-xl overflow-hidden border border-slate-200 dark:border-white/5 shadow-glow-purple relative ${isExam ? 'select-none' : ''}`}>
 
+      {/* ── كاميرا المراقبة ── */}
+      {isExam && !isBlocked && !result && !reviewAnswers && quizStarted && (
+        <CameraProctor onLookAway={triggerLookAwayWarning} enabled={true} />
+      )}
+
       {/* ── الـ Overlay (يظهر عند محاولة الغش أو الخروج من الصفحة) ── */}
       {isBlocked && (
         <div className="absolute inset-0 z-[9999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
@@ -498,18 +504,33 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
             )}
           </div>
 
-          {/* عداد التبديل */}
+          {/* عداد التبديل والابتعاد */}
           {isExam && (
-            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-medium ${
-              switchCount === 0
-                ? 'bg-slate-800 text-slate-400 border border-white/5'
-                : switchCount >= 2
-                ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
-                : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-            }`}>
-              <ShieldAlert className="w-3 h-3" />
-              تحذيرات: {switchCount} / 3
-            </span>
+            <div className="flex items-center gap-2">
+              {/* عداد تبديل التبويبات */}
+              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-medium ${
+                switchCount === 0
+                  ? 'bg-slate-800 text-slate-400 border border-white/5'
+                  : switchCount >= 2
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
+                  : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+              }`}>
+                <ShieldAlert className="w-3 h-3" />
+                تحذيرات الخروج: {switchCount} / 3
+              </span>
+
+              {/* عداد ابتعاد الماوس/النظر */}
+              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-medium ${
+                lookAwayCount === 0
+                  ? 'bg-slate-800 text-slate-400 border border-white/5'
+                  : lookAwayCount >= 2
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
+                  : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+              }`}>
+                <ShieldAlert className="w-3 h-3" />
+                تشتت الانتباه: {lookAwayCount} / 3
+              </span>
+            </div>
           )}
         </div>
       )}

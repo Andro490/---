@@ -30,7 +30,8 @@
     "react-router-dom": "^7.15.1",
     "three": "^0.184.0",
     "xlsx": "^0.18.5",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@vladmandic/face-api": "^1.7.12"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
