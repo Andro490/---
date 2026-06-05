@@ -57,25 +57,37 @@ export const PaymentSettings = () => {
     }
   };
 
+  const getLocalStorageKey = (providerId: string, fieldKey: string) => `payment_backup_${providerId}_${fieldKey}`;
+
   const handleEdit = (providerId: string) => {
     const existing = gateways.find(g => g.provider === providerId);
     setEditingProvider(providerId);
     setIsActive(existing?.isActive || false);
     
-    // إخفاء البيانات الموجودة بـ •••••••••••• حتى لا يحتاج المستخدم لإعادة كتابتها
+    // إخفاء البيانات الموجودة بـ •••••••••••• أو جلبها من LocalStorage كاحتياطي
     const masked: GatewayCredentials = {};
-    if (existing?.credentials) {
-      Object.keys(existing.credentials).forEach(key => {
-        if (existing.credentials[key]) {
-          masked[key] = '••••••••••••';
+    const currentProvider = PROVIDERS.find(p => p.id === providerId);
+    
+    currentProvider?.fields.forEach(field => {
+      if (existing?.credentials && existing.credentials[field.key]) {
+        masked[field.key] = '••••••••••••';
+      } else {
+        // محاولة جلبها من LocalStorage إذا لم تكن موجودة في قاعدة البيانات
+        const savedLocal = localStorage.getItem(getLocalStorageKey(providerId, field.key));
+        if (savedLocal) {
+          masked[field.key] = savedLocal;
         }
-      });
-    }
+      }
+    });
+
     setCredentials(masked);
   };
 
   const handleCredentialChange = (key: string, value: string) => {
     setCredentials(prev => ({ ...prev, [key]: value }));
+    if (editingProvider && value !== '••••••••••••') {
+      localStorage.setItem(getLocalStorageKey(editingProvider, key), value);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
