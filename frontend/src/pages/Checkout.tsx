@@ -106,10 +106,10 @@ const Checkout = () => {
       [
         currentCourse.title,
         currentCourse.category?.name || 'General',
-        currentCourse.price === 0 ? 'Free' : `${currentCourse.price} $`
+        currentCourse.price === 0 ? 'Free' : `${currentCourse.price} ج.م`
       ],
       [],
-      ['Total:', currentCourse.price === 0 ? '0 $' : `${currentCourse.price} $`]
+      ['Total:', currentCourse.price === 0 ? '0 ج.م' : `${currentCourse.price} ج.م`]
     ];
 
     // Create worksheet
@@ -207,7 +207,7 @@ const Checkout = () => {
             <div className="flex justify-between items-center">
               <span className="text-lg text-slate-700 dark:text-slate-300">Total amount:</span>
               <span className="text-3xl font-extrabold text-theme-neonCyan">
-                {currentCourse.price === 0 ? 'Free' : `${currentCourse.price} $`}
+                {currentCourse.price === 0 ? 'Free' : `${currentCourse.price} ج.م`}
               </span>
             </div>
           </div>

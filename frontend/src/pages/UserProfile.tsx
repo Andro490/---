@@ -136,10 +136,10 @@ const UserProfile = () => {
       [
         course.title,
         course.category || 'General',
-        course.price === 0 ? 'Free' : `${course.price} $`
+        course.price === 0 ? 'Free' : `${course.price} ج.م`
       ],
       [],
-      ['Total:', course.price === 0 ? '0 $' : `${course.price} $`]
+      ['Total:', course.price === 0 ? '0 ج.م' : `${course.price} ج.م`]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(invoiceData);
@@ -436,7 +436,7 @@ const UserProfile = () => {
                 </div>
                 <div>
                   <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Invoice: {course.title}</h4>
-                  <span className="text-xs text-slate-600 dark:text-slate-400">Date: {new Date(course.enrolledAt || new Date()).toLocaleDateString('ar-EG')} • Price: {course.price === 0 ? 'Free' : `${course.price} $`}</span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Date: {new Date(course.enrolledAt || new Date()).toLocaleDateString('ar-EG')} • Price: {course.price === 0 ? 'Free' : `${course.price} ج.م`}</span>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">

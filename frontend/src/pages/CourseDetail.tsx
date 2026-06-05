@@ -188,7 +188,7 @@ const CourseDetail = () => {
                 {currentCourse.price === 0 ? (
                   <span className="text-emerald-400 font-bold">مجاني</span>
                 ) : (
-                  `${currentCourse.price} $`
+                  `${currentCourse.price} ج.م`
                 )}
               </span>
             </div>
