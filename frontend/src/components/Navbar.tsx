@@ -24,7 +24,7 @@ const Navbar = () => {
 
   return (
     <nav
-      className="fixed top-4 left-4 right-4 z-50 glass-panel rounded-2xl px-6 py-4 shadow-glass max-w-7xl mx-auto flex items-center justify-between rtl"
+      className="fixed top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 z-50 glass-panel rounded-2xl px-3 py-3 md:px-6 md:py-4 shadow-glass max-w-7xl mx-auto flex items-center justify-between rtl"
       style={{ background: 'var(--navbar-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
     >
       {/* Brand Logo */}
@@ -32,7 +32,7 @@ const Navbar = () => {
         <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-theme-accent to-theme-neonCyan flex items-center justify-center text-slate-900 dark:text-white shadow-glow-cyan transition-transform group-hover:rotate-12 duration-300">
           <BookOpen className="w-5 h-5" />
         </div>
-        <span className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-white to-slate-300 group-hover:to-theme-neonCyan transition-all duration-300">
+        <span className="text-base md:text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-white to-slate-300 group-hover:to-theme-neonCyan transition-all duration-300 whitespace-nowrap">
           {siteConfig.brandPrefix} <span className="text-theme-neonCyan">{siteConfig.brandHighlight}</span>
         </span>
       </Link>
@@ -103,19 +103,20 @@ const Navbar = () => {
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3">
             <Link
               to="/login"
-              className="px-4 py-2 hover:text-theme-neonCyan transition-colors font-medium text-sm"
+              className="px-2 py-1.5 md:px-4 md:py-2 hover:text-theme-neonCyan transition-colors font-medium text-[11px] md:text-sm whitespace-nowrap"
               style={{ color: 'var(--text-secondary)' }}
             >
               تسجيل الدخول
             </Link>
             <Link
               to="/register"
-              className="px-5 py-2.5 rounded-xl bg-linear-to-r from-theme-accent to-theme-neonPurple text-slate-900 dark:text-white text-sm font-semibold hover:shadow-glow-purple transition-all duration-300 transform hover:scale-[1.02]"
+              className="px-3 py-2 md:px-5 md:py-2.5 rounded-xl bg-linear-to-r from-theme-accent to-theme-neonPurple text-slate-900 dark:text-white text-[11px] md:text-sm font-semibold hover:shadow-glow-purple transition-all duration-300 transform hover:scale-[1.02] whitespace-nowrap"
             >
-              انضم إلينا مجاناً
+              <span className="hidden sm:inline">انضم إلينا مجاناً</span>
+              <span className="sm:hidden">حساب جديد</span>
             </Link>
           </div>
         )}

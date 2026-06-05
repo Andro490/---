@@ -166,7 +166,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
   if (!enabled) return null;
 
   return (
-    <div className={`fixed bottom-4 right-4 w-44 rounded-xl overflow-hidden z-50 shadow-xl border-2 transition-all duration-300 ${
+    <div className={`fixed bottom-4 md:bottom-6 right-4 md:right-6 w-28 md:w-48 rounded-2xl overflow-hidden z-[9999] shadow-2xl border-2 transition-all duration-300 ${
       gazeWarn
         ? 'border-red-500 shadow-red-500/60 scale-105'
         : phase === 'ready'
@@ -180,22 +180,22 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
         muted
         playsInline
         style={{ display: phase === 'ready' ? 'block' : 'none' }}
-        className="w-full h-36 object-cover scale-x-[-1]"
+        className="w-full h-24 md:h-36 object-cover scale-x-[-1]"
       />
 
       {phase === 'init' && (
-        <div className="h-36 flex flex-col items-center justify-center gap-2 text-theme-neonCyan">
-          <Loader2 className="w-7 h-7 animate-spin" />
-          <span className="text-[9px] font-semibold text-center px-2 leading-tight">
+        <div className="h-24 md:h-36 flex flex-col items-center justify-center gap-2 text-theme-neonCyan">
+          <Loader2 className="w-5 h-5 md:w-7 md:h-7 animate-spin" />
+          <span className="text-[8px] md:text-[9px] font-semibold text-center px-2 leading-tight">
             جاري تهيئة الكاميرا...
           </span>
         </div>
       )}
 
       {phase === 'error' && (
-        <div className="h-36 flex flex-col items-center justify-center gap-2 p-2 text-center text-red-400">
-          <CameraOff className="w-7 h-7" />
-          <span className="text-[9px] font-bold leading-tight">{errorMsg}</span>
+        <div className="h-24 md:h-36 flex flex-col items-center justify-center gap-2 p-2 text-center text-red-400">
+          <CameraOff className="w-5 h-5 md:w-7 md:h-7" />
+          <span className="text-[8px] md:text-[9px] font-bold leading-tight">{errorMsg}</span>
         </div>
       )}
 

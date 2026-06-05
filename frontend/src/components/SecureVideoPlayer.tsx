@@ -162,9 +162,11 @@ const SecureVideoPlayer: FC<SecureVideoPlayerProps> = ({ videoUrl, platformType,
       className="relative w-full aspect-video bg-slate-950 rounded-2xl overflow-hidden shadow-glow-purple group select-none"
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* ✅ المشغل دائماً مرئي — لا نغير opacity أبداً لتجنب إيقاف تحميل الـ iframe */}
-      <div className="absolute inset-0 w-full h-full z-10">
-        {renderVideo()}
+      {/* ✅ المشغل دائماً مرئي — pointer-events-none على الـ wrapper حتى لا تتعارض مع عناصر التحكم */}
+      <div className="absolute inset-0 w-full h-full z-10 pointer-events-none">
+        <div className="w-full h-full pointer-events-auto">
+          {renderVideo()}
+        </div>
       </div>
 
       {/* 🔒 طبقة الحماية — تظهر فوق المشغل فقط عند تفعيل isProtected */}

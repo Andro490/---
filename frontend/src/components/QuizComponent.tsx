@@ -575,8 +575,8 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
 
       {/* ── شريط حالة الأمان والمؤقت ── */}
       {(isExam || timeLeft !== null) && (
-        <div className="bg-slate-900/90 backdrop-blur border-b border-white/5 px-4 py-2 flex items-center justify-between gap-3 text-xs" dir="rtl">
-          <div className="flex items-center gap-3">
+        <div className="bg-slate-900/90 backdrop-blur border-b border-white/5 px-4 py-2 flex flex-col md:flex-row items-center justify-between gap-3 text-xs" dir="rtl">
+          <div className="flex flex-wrap justify-center items-center gap-2 md:gap-3">
             {/* حالة المراقبة */}
             {isExam && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -602,7 +602,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
 
           {/* عداد التبديل والابتعاد */}
           {isExam && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap justify-center items-center gap-2">
               {/* عداد تبديل التبويبات */}
               <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-medium ${
                 switchCount === 0

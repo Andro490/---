@@ -219,7 +219,7 @@ const CoursePlayer = () => {
             <>
               {/* Conditional rendering for Quiz vs Video Player */}
               {activeLesson.platformType === 'quiz' || activeLesson.platformType === 'exam' || activeLesson.platformType === 'dictation' ? (
-                <div className="w-full aspect-video md:aspect-auto md:min-h-[500px]">
+                <div className="w-full h-[75vh] md:h-auto md:min-h-[500px]">
                   <QuizComponent 
                     key={activeLesson.id} 
                     lessonId={activeLesson.id} 
