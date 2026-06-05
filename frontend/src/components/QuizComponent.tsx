@@ -81,6 +81,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
         setPreviousResult(res.data.previousResult);
         setQuiz(fetchedQuiz); // نحتاج quiz.passScore للعرض
         setLoading(false);
+        if (onQuizComplete) onQuizComplete(); // Unlock next lesson if already taken
         return;
       }
 
@@ -121,13 +122,15 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
     try {
       const res = await api.post(`/courses/lessons/${lessonId}/quiz/submit`, { answers: answersToSubmit });
       setResult(res.data);
-      if (res.data.passed && onQuizComplete && !reviewAnswers) {
+      const isExamType = quiz.type === 'exam' || quiz.type === 'dictation';
+      if ((res.data.passed || isExamType) && onQuizComplete && !reviewAnswers) {
         onQuizComplete();
       }
     } catch (err: any) {
       // 403 = الامتحان النهائي تم أداؤه مسبقاً
       if (err.response?.status === 403) {
         setAlreadyTaken(true);
+        if (onQuizComplete) onQuizComplete(); // تأكد من فتحه للدرس التالي لأنه أداه مسبقاً
         // أعد جلب البيانات لعرض النتيجة السابقة
         fetchQuiz();
       } else {
