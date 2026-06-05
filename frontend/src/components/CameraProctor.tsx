@@ -118,9 +118,13 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
 
             const ear = (earLeft + earRight) / 2;
 
+            // ── حساب نسب الوجه ككل (مفيدة لمعرفة الميل للأسفل) ──
+            const faceRatio = faceH / faceWidth;
+            const boxRatio = result.detection.box.height / result.detection.box.width;
+
             // تحديد الحالة - حساسية مفرطة جداً
             const headTurned  = yaw > 0.10;
-            const lookingDown = pitch > 0.51; 
+            const lookingDown = boxRatio < 1.15; // لما تبص تحت، طول الوش بيقصر بالنسبة لعرضه
             const eyesSquint  = ear < 0.22; 
 
             const lookingAway = headTurned || lookingDown || eyesSquint;
@@ -132,10 +136,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
               setGazeWarn(false);
             }
 
-            const dir = headTurned  ? `👁 يمين/شمال y=${yaw.toFixed(2)}`
-                      : lookingDown  ? `👇 تحت p=${pitch.toFixed(2)}`
-                      : eyesSquint   ? `😑 عين ضيقة e=${ear.toFixed(2)}`
-                      : `✅ y=${yaw.toFixed(2)} p=${pitch.toFixed(2)}`;
+            const dir = `y=${yaw.toFixed(2)} p=${pitch.toFixed(2)} b=${boxRatio.toFixed(2)}`;
 
             setDebugText(dir);
           }
