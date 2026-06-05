@@ -80,7 +80,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
         try {
           const result = await faceapi
             .detectSingleFace(video,
-              new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 })
+              new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.15 })
             )
             .withFaceLandmarks(true); // true = tiny 68-point model
 
@@ -144,8 +144,8 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             setDebugText(dir);
           }
 
-          // 3 فريمات متتالية (~ثانية إلا ربع) علشان يتأكد إنه فعلاً بيبص بره مش مجرد حركة عابرة
-          if (missedRef.current >= 3) {
+          // 4 فريمات متتالية (~ثانية كاملة) علشان يتأكد إنه فعلاً بيبص بره أو وشه غايب
+          if (missedRef.current >= 4) {
             const now = Date.now();
             if (now - lastWarnRef.current > 4000) {
               lastWarnRef.current = now;
