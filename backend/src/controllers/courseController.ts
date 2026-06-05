@@ -6,7 +6,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 // --- إعدادات Bunny.net (يتم قراءتها من متغيرات البيئة) ---
 const BUNNY_LIBRARY_ID = process.env.BUNNY_LIBRARY_ID || '669586'; // المكتبة الافتراضية
 const BUNNY_TOKEN_KEY = process.env.BUNNY_TOKEN_KEY || '';       // المفتاح الافتراضي
-const BUNNY_URL_EXPIRY = parseInt(process.env.BUNNY_URL_EXPIRY || '0'); // 4 ساعات
+const BUNNY_URL_EXPIRY = parseInt(process.env.BUNNY_URL_EXPIRY || '14400'); // 4 ساعات
 
 /**
  * يجلب الـ Token Key الخاص بكل مكتبة تلقائياً.
