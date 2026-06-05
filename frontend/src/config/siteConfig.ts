@@ -7,20 +7,20 @@
 
 export const siteConfig = {
   // 📌 1. المعلومات الأساسية (Basic Info)
-  name: "Learning platform", // اسم المنصة بالكامل
-  brandPrefix: "Learning", // الجزء الأول من الاسم
-  brandHighlight: "platform", // الجزء المميز بلون مختلف
-  instructorName: "Andro Emil", // اسم المدرس أو صاحب المنصة
-  description: "An educational platform for learning programming at the highest level.", // وصف المنصة (يستخدم في الـ SEO)
+  name: "English Academy", // اسم المنصة بالكامل
+  brandPrefix: "Yasser", // الجزء الأول من الاسم
+  brandHighlight: "English", // الجزء المميز بلون مختلف
+  instructorName: "Yasser", // اسم المدرس أو صاحب المنصة
+  description: "A modern educational platform for mastering English language skills, grammar, conversation, and exam preparation.", // وصف المنصة (يستخدم في الـ SEO)
   
   // 📌 2. الصفحة الرئيسية - Hero Section
   home: {
-    heroBadge: "تعلم البرمجة بأعلى مستوى 🚀", // النص الصغير أعلى العنوان الرئيسي
-    heroTitleLine1: "Create your educational path", // السطر الأول من العنوان الرئيسي الكبير
-    heroTitleLine2: "in cinematic way", // السطر الثاني (يظهر بالألوان المتدرجة)
-    heroDescription: "منصة تعليمية متكاملة لتقديم محتوى احترافي يسهل على الطلاب استيعاب المواد بأسلوب تفاعلي وحديث.", // الوصف تحت العنوان
-    ctaPrimary: "تصفح الدورات المتاحة", // نص زر الاشتراك الرئيسي
-    ctaSecondary: "ابدأ الآن مجاناً", // نص زر تسجيل الدخول الثانوي
+    heroBadge: "Speak English Like a Pro 🚀", // النص الصغير أعلى العنوان الرئيسي
+    heroTitleLine1: "Build Your English Skills", // السطر الأول من العنوان الرئيسي الكبير
+    heroTitleLine2: "Step by Step", // السطر الثاني (يظهر بالألوان المتدرجة)
+    heroDescription: "Join interactive English courses designed to improve your grammar, vocabulary, speaking, and listening skills with practical lessons and real-world examples.", // الوصف تحت العنوان
+    ctaPrimary: "Explore Courses", // نص زر الاشتراك الرئيسي
+    ctaSecondary: "Start Learning Today", // نص زر تسجيل الدخول الثانوي
   },
 
   // 📌 3. معلومات التواصل (Contact Info)
@@ -54,9 +54,9 @@ export const siteConfig = {
 
   // 📌 7. إعدادات الـ SEO
   seo: {
-    defaultTitle: "أفضل منصة تعليمية",
-    defaultDescription: "منصة تعليمية تقدم كورسات بمستوى عالمي وبطرق تفاعلية لضمان فهم واستيعاب الطلاب.",
-    keywords: "تعليم, كورسات, أونلاين, منصة تعليمية",
+    defaultTitle: "English Academy | Learn English Online",
+    defaultDescription: "Master English with Yasser through interactive courses, practical exercises, and structured lessons designed to improve speaking, listening, reading, and writing skills.",
+    keywords: "learn english, english courses, online english classes, english speaking, english grammar, english vocabulary, english learning platform, yasser english academy, english for beginners, english fluency",
   },
 
   // 📌 8. إعدادات السيرفر والـ API
