@@ -61,7 +61,17 @@ export const PaymentSettings = () => {
     const existing = gateways.find(g => g.provider === providerId);
     setEditingProvider(providerId);
     setIsActive(existing?.isActive || false);
-    setCredentials(existing?.credentials || {});
+    
+    // إخفاء البيانات الموجودة بـ •••••••••••• حتى لا يحتاج المستخدم لإعادة كتابتها
+    const masked: GatewayCredentials = {};
+    if (existing?.credentials) {
+      Object.keys(existing.credentials).forEach(key => {
+        if (existing.credentials[key]) {
+          masked[key] = '••••••••••••';
+        }
+      });
+    }
+    setCredentials(masked);
   };
 
   const handleCredentialChange = (key: string, value: string) => {
@@ -73,11 +83,22 @@ export const PaymentSettings = () => {
     if (!editingProvider) return;
 
     setSaving(true);
+    
+    // دمج البيانات الجديدة مع البيانات القديمة (تجاهل الـ ••••••••••••)
+    const existing = gateways.find(g => g.provider === editingProvider);
+    const finalCreds = { ...(existing?.credentials || {}) };
+    
+    Object.keys(credentials).forEach(k => {
+      if (credentials[k] && credentials[k] !== '••••••••••••') {
+        finalCreds[k] = credentials[k];
+      }
+    });
+
     try {
       await api.post('/payments/settings', {
         provider: editingProvider,
         isActive,
-        credentials
+        credentials: finalCreds
       });
       alert('تم حفظ إعدادات وسيلة الدفع بنجاح');
       setEditingProvider(null);
@@ -152,14 +173,20 @@ export const PaymentSettings = () => {
                   {provider.fields.map(field => (
                     <div key={field.key} className="space-y-1.5">
                       <label className="text-slate-600 dark:text-slate-400 text-xs font-semibold">{field.label}</label>
-                      <input
-                        type="text"
-                        value={credentials[field.key] || ''}
-                        onChange={(e) => handleCredentialChange(field.key, e.target.value)}
-                        placeholder={`أدخل ${field.label}...`}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-theme-neonCyan transition-all text-sm font-mono"
-                        required
-                      />
+                        <input
+                          type={credentials[field.key] === '••••••••••••' ? 'password' : 'text'}
+                          value={credentials[field.key] || ''}
+                          onChange={(e) => handleCredentialChange(field.key, e.target.value)}
+                          onFocus={() => {
+                            // مسح الحقل عند الضغط عليه إذا كان مخفياً لتسهيل التعديل
+                            if (credentials[field.key] === '••••••••••••') {
+                              handleCredentialChange(field.key, '');
+                            }
+                          }}
+                          placeholder={`أدخل ${field.label}...`}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-theme-neonCyan transition-all text-sm font-mono"
+                          required={!gwData?.credentials?.[field.key]}
+                        />
                     </div>
                   ))}
 

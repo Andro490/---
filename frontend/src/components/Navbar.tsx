@@ -30,12 +30,12 @@ const Navbar = () => {
       <div className="flex items-center justify-between px-3 py-2.5 md:px-6 md:py-4">
 
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-linear-to-tr from-theme-accent to-theme-neonCyan flex items-center justify-center text-slate-900 dark:text-white shadow-glow-cyan transition-transform group-hover:rotate-12 duration-300">
-            <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
+        <Link to="/" className="flex items-center gap-1.5 md:gap-2 group flex-shrink-0">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-linear-to-tr from-theme-accent to-theme-neonCyan flex items-center justify-center text-slate-900 dark:text-white shadow-glow-cyan transition-transform group-hover:rotate-12 duration-300">
+            <BookOpen className="w-3.5 h-3.5 md:w-5 md:h-5" />
           </div>
-          {/* اسم المنصة — مخفي على الموبايل الصغير جداً */}
-          <span className="hidden sm:block text-base md:text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-white to-slate-300 group-hover:to-theme-neonCyan transition-all duration-300 whitespace-nowrap">
+          {/* اسم المنصة — يظهر بحجم صغير جداً على الموبايل */}
+          <span className="block text-[11px] xs:text-xs sm:text-base md:text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-white to-slate-300 group-hover:to-theme-neonCyan transition-all duration-300 whitespace-nowrap">
             {siteConfig.brandPrefix} <span className="text-theme-neonCyan">{siteConfig.brandHighlight}</span>
           </span>
         </Link>
