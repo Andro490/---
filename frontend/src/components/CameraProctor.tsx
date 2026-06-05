@@ -1,6 +1,6 @@
 /**
- * CameraProctor v4 — نظام مراقبة الكاميرا
- * الإصلاح: كل المنطق في useEffect واحد متسلسل
+ * CameraProctor v5 — كشف اتجاه الوجه (يمين / شمال / تحت)
+ * يستخدم Face Landmarks لحساب زاوية الرأس بدقة
  */
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
@@ -20,29 +20,32 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
   const missedRef   = useRef(0);
   const lastWarnRef = useRef(0);
   const onLookRef   = useRef(onLookAway);
-  onLookRef.current = onLookAway; // always fresh
+  onLookRef.current = onLookAway;
 
-  const [phase, setPhase]           = useState<'init'|'ready'|'error'>('init');
-  const [errorMsg, setErrorMsg]     = useState('');
-  const [gazeWarn, setGazeWarn]     = useState(false);
-  const [scoreText, setScoreText]   = useState('...');
+  const [phase, setPhase]         = useState<'init' | 'ready' | 'error'>('init');
+  const [errorMsg, setErrorMsg]   = useState('');
+  const [gazeWarn, setGazeWarn]   = useState(false);
+  const [debugText, setDebugText] = useState('...');
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
     const run = async () => {
-      // 1️⃣ تحميل النماذج
+      // ─── 1) تحميل النموذجين ───────────────────────────────────────────────
       try {
         if (!faceapi.nets.tinyFaceDetector.isLoaded) {
           await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
         }
+        if (!faceapi.nets.faceLandmark68TinyNet.isLoaded) {
+          await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+        }
       } catch (e: any) {
-        if (!cancelled) { setPhase('error'); setErrorMsg('فشل تحميل نموذج الكشف'); }
+        if (!cancelled) { setPhase('error'); setErrorMsg('فشل تحميل النماذج'); }
         return;
       }
 
-      // 2️⃣ فتح الكاميرا
+      // ─── 2) فتح الكاميرا ─────────────────────────────────────────────────
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -53,41 +56,84 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
       } catch (e: any) {
         if (!cancelled) {
           setPhase('error');
-          setErrorMsg(e.name === 'NotAllowedError' ? 'الكاميرا محظورة — اسمح لها من المتصفح' : `خطأ: ${e.message}`);
+          setErrorMsg(e.name === 'NotAllowedError'
+            ? 'الكاميرا محظورة — اسمح لها من المتصفح'
+            : `خطأ: ${e.message}`
+          );
         }
         return;
       }
 
-      // 3️⃣ ربط الكاميرا بعنصر الفيديو
+      // ─── 3) تشغيل الفيديو ────────────────────────────────────────────────
       if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
-
       const video = videoRef.current!;
       video.srcObject = stream;
-      await new Promise<void>((res) => { video.onloadedmetadata = () => res(); });
+      await new Promise<void>(res => { video.onloadedmetadata = () => res(); });
       await video.play();
       if (cancelled) return;
-
       setPhase('ready');
 
-      // 4️⃣ حلقة الكشف كل 500ms
+      // ─── 4) حلقة الكشف ───────────────────────────────────────────────────
       timerRef.current = setInterval(async () => {
-        if (cancelled) return;
-        if (!video || video.paused || video.ended || video.readyState < 3) return;
+        if (cancelled || !video || video.paused || video.readyState < 3) return;
 
         try {
-          const det = await faceapi.detectSingleFace(
-            video,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.25 })
-          );
+          const result = await faceapi
+            .detectSingleFace(video,
+              new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 })
+            )
+            .withFaceLandmarks(true); // true = tiny 68-point model
 
-          if (!det) {
+          if (!result) {
             missedRef.current += 1;
-            setScoreText('❌ لا وجه');
+            setDebugText('❌ لا وجه');
           } else {
-            const pct = Math.round(det.score * 100);
-            setScoreText(`✅ ${pct}%`);
-            // score منخفض = الوش بيتلوي = احتمال غش
-            if (det.score < 0.40) {
+            const pts = result.landmarks.positions;
+
+            /*
+             * حساب اتجاه الرأس:
+             * نقاط مرجعية:
+             *   0  = حافة الوجه اليسرى
+             *   16 = حافة الوجه اليمنى
+             *   30 = طرف الأنف (أمام)
+             *   8  = الذقن
+             *   27 = جذر الأنف (بين العينين)
+             *
+             * مقياس الدوران الأفقي:
+             *   yaw = (طرف الأنف - مركز الوجه) / نصف عرض الوجه
+             *   قيمة صغيرة = وجه مستقيم
+             *   قيمة كبيرة يمين أو يسار = الرأس بيلتف
+             *
+             * مقياس الإمالة الرأسية:
+             *   pitch = كم انزل الأنف تحت مستوى الذقن
+             */
+            const faceLeft  = pts[0].x;
+            const faceRight = pts[16].x;
+            const faceWidth = faceRight - faceLeft;
+            const faceCenter = (faceLeft + faceRight) / 2;
+
+            const noseTip = pts[30];
+
+            // الإزاحة الأفقية للأنف عن المركز (مُعيَّرة بعرض الوجه)
+            const yaw = Math.abs((noseTip.x - faceCenter) / (faceWidth / 2));
+
+            // الإمالة الرأسية (الأنف ينزل تجاه الذقن = بيبص تحت)
+            const noseY   = noseTip.y;
+            const chinY   = pts[8].y;
+            const browY   = pts[27].y;
+            const faceH   = chinY - browY;
+            const pitch   = (noseY - browY) / faceH; // طبيعي ~0.55، بيبص تحت > 0.75
+
+            const direction =
+              yaw > 0.40  ? `يمين/شمال yaw=${yaw.toFixed(2)}`
+            : pitch > 0.75 ? `تحت pitch=${pitch.toFixed(2)}`
+            : `✅ OK y=${yaw.toFixed(2)} p=${pitch.toFixed(2)}`;
+
+            setDebugText(direction);
+
+            const lookingAway = yaw > 0.40 || pitch > 0.75;
+
+            if (lookingAway) {
               missedRef.current += 1;
             } else {
               missedRef.current = 0;
@@ -95,12 +141,12 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             }
           }
 
-          // 4 فريمات متتالية (~2 ثانية) → تحذير (وانتظر 5 ثوانٍ قبل التالي)
+          // 4 فريمات (~2 ثانية) → أعطِ تحذير
           if (missedRef.current >= 4) {
             const now = Date.now();
             if (now - lastWarnRef.current > 5000) {
               lastWarnRef.current = now;
-              missedRef.current = 0;
+              missedRef.current   = 0;
               setGazeWarn(true);
               onLookRef.current();
               setTimeout(() => setGazeWarn(false), 2500);
@@ -108,8 +154,8 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
               missedRef.current = 0;
             }
           }
-        } catch {
-          // تجاهل أخطاء عابرة في الكشف
+        } catch (e) {
+          console.warn('[CameraProctor] detect:', e);
         }
       }, 500);
     };
@@ -126,7 +172,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
   if (!enabled) return null;
 
   return (
-    <div className={`fixed bottom-4 right-4 w-44 rounded-xl overflow-hidden z-50 shadow-xl border-2 transition-all duration-500 ${
+    <div className={`fixed bottom-4 right-4 w-44 rounded-xl overflow-hidden z-50 shadow-xl border-2 transition-all duration-300 ${
       gazeWarn
         ? 'border-red-500 shadow-red-500/60 scale-105'
         : phase === 'ready'
@@ -134,7 +180,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
         : 'border-slate-600'
     } bg-slate-950`}>
 
-      {/* ─── الفيديو — دايماً في DOM ─────────────────────────────── */}
+      {/* الفيديو — دايماً في DOM */}
       <video
         ref={videoRef}
         muted
@@ -143,7 +189,6 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
         className="w-full h-36 object-cover scale-x-[-1]"
       />
 
-      {/* ─── Loading ─────────────────────────────────────────────── */}
       {phase === 'init' && (
         <div className="h-36 flex flex-col items-center justify-center gap-2 text-theme-neonCyan">
           <Loader2 className="w-7 h-7 animate-spin" />
@@ -153,7 +198,6 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
         </div>
       )}
 
-      {/* ─── Error ───────────────────────────────────────────────── */}
       {phase === 'error' && (
         <div className="h-36 flex flex-col items-center justify-center gap-2 p-2 text-center text-red-400">
           <CameraOff className="w-7 h-7" />
@@ -161,10 +205,8 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
         </div>
       )}
 
-      {/* ─── Overlays فوق الفيديو ────────────────────────────────── */}
       {phase === 'ready' && (
         <>
-          {/* شارة الحالة */}
           <div className={`absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold backdrop-blur-sm ${
             gazeWarn ? 'bg-red-600/90 text-white' : 'bg-emerald-600/80 text-white'
           }`}>
@@ -174,9 +216,9 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             }
           </div>
 
-          {/* نتيجة الكشف (للتطوير) */}
-          <div className="absolute bottom-1 left-1 text-[8px] text-white/40 font-mono select-none">
-            {scoreText}
+          {/* debug — يُحذف في الإنتاج */}
+          <div className="absolute bottom-1 left-1 right-1 text-[7px] text-white/50 font-mono leading-tight truncate">
+            {debugText}
           </div>
 
           <div className="absolute bottom-1.5 right-1.5 bg-black/40 rounded-full p-0.5">
