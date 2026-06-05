@@ -1,3 +1,10 @@
+/**
+ * CameraProctor v3 — كشف الوجه بالكاميرا
+ * ==========================================
+ * - Video دايماً موجود في الـ DOM (مخفي لحين التجهيز)
+ * - يكشف إذا الوجه غاب أو انزاح → يعطي تحذير
+ * - يستخدم النماذج المحلية من /public/models
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import { Camera, CameraOff, Loader2, Eye } from 'lucide-react';
@@ -7,192 +14,202 @@ interface CameraProctorProps {
   enabled: boolean;
 }
 
-// ─── نقطة مرجعية لحساب اتجاه الوجه ──────────────────────────────────────────
-// Face landmarks indices:
-//   Nose tip       = 30
-//   Left eye left  = 36, Right eye right = 45
-//   Chin           = 8
-
 const MODEL_URL = '/models';
-let modelsLoaded = false; // نحمل النماذج مرة واحدة فقط
+let modelsLoaded = false;
 
 const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef  = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lookAwayFramesRef = useRef(0); // عدد الفريمات المتتالية اللي شاف فيها وش مائل
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const missedRef = useRef(0); // فريمات غياب الوجه المتتالية
+  const lastWarnRef = useRef(0); // وقت آخر تحذير (ms)
 
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [gazeWarning, setGazeWarning] = useState(false); // للإضاءة الحمراء
+  const [status, setStatus]           = useState<'loading' | 'ready' | 'error'>('loading');
+  const [errorMsg, setErrorMsg]       = useState('');
+  const [gazeWarn, setGazeWarn]       = useState(false);
+  const [debugScore, setDebugScore]   = useState<string>('—');
 
-  // ─── تحميل النماذج ومعالجة الكاميرا ─────────────────────────────────────
+  // ─── Step 1: حمّل النماذج ──────────────────────────────────────────────────
   useEffect(() => {
     if (!enabled) return;
 
-    const init = async () => {
-      try {
-        // 1) حمّل النماذج من public/models (مرة واحدة فقط)
-        if (!modelsLoaded) {
-          await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-            faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-          ]);
+    const loadModels = async () => {
+      if (!modelsLoaded) {
+        try {
+          await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
           modelsLoaded = true;
+          console.log('[CameraProctor] ✅ models loaded');
+        } catch (e) {
+          console.error('[CameraProctor] model load error:', e);
+          setStatus('error');
+          setErrorMsg('فشل تحميل نماذج الكشف');
         }
+      }
+    };
 
-        // 2) افتح الكاميرا
+    loadModels();
+  }, [enabled]);
+
+  // ─── Step 2: بعد ما يُعرض الـ video في DOM → شغّل الكاميرا ────────────────
+  useEffect(() => {
+    if (!enabled || !modelsLoaded) return;
+
+    const startCamera = async () => {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 320, height: 240, facingMode: 'user' },
           audio: false,
         });
         streamRef.current = stream;
 
+        // الـ video دايماً موجود في الـ DOM لأننا بنعرضه دايماً
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current!.play().then(() => {
+              console.log('[CameraProctor] ✅ camera playing');
+              setStatus('ready');
+            });
+          };
         }
-
-        setStatus('ready');
       } catch (err: any) {
-        console.error('[CameraProctor]', err);
+        console.error('[CameraProctor] camera error:', err);
         setStatus('error');
         setErrorMsg(
           err.name === 'NotAllowedError'
-            ? 'الكاميرا محظورة من المتصفح'
-            : `فشل تحميل الكاميرا: ${err.message}`
+            ? 'الكاميرا محظورة — اسمح لها من إعدادات المتصفح'
+            : `خطأ: ${err.message}`
         );
       }
     };
 
-    init();
+    startCamera();
 
     return () => {
-      // cleanup عند إزالة الكومبوننت
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach(t => t.stop());
-      modelsLoaded = modelsLoaded; // keep models cached
     };
   }, [enabled]);
 
-  // ─── حلقة الكشف (تبدأ بعد تجهيز الكاميرا) ──────────────────────────────
+  // ─── Step 3: حلقة الكشف ────────────────────────────────────────────────────
   useEffect(() => {
     if (status !== 'ready') return;
 
-    intervalRef.current = setInterval(async () => {
+    timerRef.current = setInterval(async () => {
       const video = videoRef.current;
-      if (!video || video.paused || video.ended || video.readyState < 2) return;
+      if (!video || video.paused || video.ended || video.readyState < 3) return;
 
-      // كشف الوجه + 68 نقطة
-      const detection = await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.35 }))
-        .withFaceLandmarks(true); // true = tiny landmarks
+      try {
+        const result = await faceapi.detectSingleFace(
+          video,
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 })
+        );
 
-      if (!detection) {
-        // لا يوجد وجه → ربما بعيد تماماً
-        lookAwayFramesRef.current += 1;
-      } else {
-        const pts = detection.landmarks.positions;
-
-        // حساب مدى دوران الوجه:
-        // نأخذ نقطة طرف الأنف (30) وطرفي العينين (36، 45)
-        const noseTip   = pts[30];
-        const leftEye   = pts[36];
-        const rightEye  = pts[45];
-
-        const eyeCenter = {
-          x: (leftEye.x + rightEye.x) / 2,
-          y: (leftEye.y + rightEye.y) / 2,
-        };
-
-        // الفرق الأفقي: لو الأنف انزاح كتير عن مركز العينين = الوش مائل
-        const eyeWidth = Math.abs(rightEye.x - leftEye.x);
-        const horizontalShift = Math.abs(noseTip.x - eyeCenter.x) / eyeWidth;
-
-        // الفرق الرأسي: لو الأنف نزل كتير تحت مركز العينين = الوش بيبص تحت
-        const faceHeight = Math.abs(pts[8].y - pts[27].y); // chin to nose bridge
-        const verticalShift = (noseTip.y - eyeCenter.y) / faceHeight;
-
-        // حدود الكشف:
-        //  horizontalShift > 0.35  → الوش بيبص يمين أو شمال (ملزمة)
-        //  verticalShift   > 0.55  → الوش بيبص تحت كتير
-        const isLookingAway = horizontalShift > 0.35 || verticalShift > 0.55;
-
-        if (isLookingAway) {
-          lookAwayFramesRef.current += 1;
+        if (!result) {
+          // لا يوجد وجه (غاب أو التفت جداً)
+          missedRef.current += 1;
+          setDebugScore('❌ لا وجه');
         } else {
-          lookAwayFramesRef.current = 0; // عاد للشاشة → أعد العداد
-          setGazeWarning(false);
-        }
-      }
+          const score = Math.round(result.score * 100);
+          setDebugScore(`✅ ${score}%`);
 
-      // 4 فريمات متتالية (≈ 2 ثانية) → أعطِ تحذير
-      if (lookAwayFramesRef.current >= 4) {
-        setGazeWarning(true);
-        lookAwayFramesRef.current = 0;
-        onLookAway();
+          // لو نتيجة الكشف منخفضة جداً = الوش بيتلوي بعيد
+          if (result.score < 0.42) {
+            missedRef.current += 1;
+          } else {
+            // وجه واضح → أعد العداد
+            missedRef.current = 0;
+            setGazeWarn(false);
+          }
+        }
+
+        // 4 فريمات متتالية (~2 ثانية) بدون وجه واضح → تحذير
+        // ونمنع تكرار التحذير خلال 5 ثوانٍ
+        if (missedRef.current >= 4) {
+          const now = Date.now();
+          if (now - lastWarnRef.current > 5000) {
+            lastWarnRef.current = now;
+            missedRef.current = 0;
+            setGazeWarn(true);
+            onLookAway();
+            // ابقَ أحمر لمدة 2 ثانية ثم ارجع
+            setTimeout(() => setGazeWarn(false), 2000);
+          } else {
+            missedRef.current = 0; // أعد العداد دون تحذير جديد
+          }
+        }
+      } catch (e) {
+        console.warn('[CameraProctor] detect error:', e);
       }
     }, 500);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [status, onLookAway]);
 
   if (!enabled) return null;
 
   return (
-    <div
-      className={`fixed bottom-4 right-4 w-44 h-36 rounded-xl overflow-hidden z-50 shadow-lg border-2 transition-all duration-300 ${
-        gazeWarning
-          ? 'border-red-500 shadow-red-500/40'
-          : status === 'ready'
-          ? 'border-emerald-500/60 shadow-emerald-500/20'
-          : 'border-slate-600'
-      } bg-slate-950`}
-    >
-      {/* ── شاشة التحميل ── */}
+    <div className={`fixed bottom-4 right-4 w-44 rounded-xl overflow-hidden z-50 shadow-xl border-2 transition-all duration-300 ${
+      gazeWarn
+        ? 'border-red-500 shadow-red-500/50 animate-pulse'
+        : status === 'ready'
+        ? 'border-emerald-500/70 shadow-emerald-500/20'
+        : 'border-slate-600'
+    } bg-slate-950`}>
+
+      {/* ── الفيديو — دايماً موجود في DOM ── */}
+      <video
+        ref={videoRef}
+        muted
+        playsInline
+        className={`w-full object-cover scale-x-[-1] transition-opacity duration-300 ${
+          status === 'ready' ? 'opacity-100 h-36' : 'opacity-0 h-0'
+        }`}
+      />
+
+      {/* ── Loading ── */}
       {status === 'loading' && (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-theme-neonCyan">
+        <div className="h-36 flex flex-col items-center justify-center gap-2 text-theme-neonCyan">
           <Loader2 className="w-7 h-7 animate-spin" />
-          <span className="text-[10px] font-semibold text-center px-2">جاري تحميل نظام المراقبة...</span>
+          <span className="text-[9px] font-semibold text-center px-2 leading-tight">
+            جاري تهيئة نظام المراقبة...
+          </span>
         </div>
       )}
 
-      {/* ── خطأ ── */}
+      {/* ── Error ── */}
       {status === 'error' && (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2 text-center text-red-400">
+        <div className="h-36 flex flex-col items-center justify-center gap-2 p-2 text-center text-red-400">
           <CameraOff className="w-7 h-7" />
           <span className="text-[9px] font-bold leading-tight">{errorMsg}</span>
         </div>
       )}
 
-      {/* ── الكاميرا الحية ── */}
+      {/* ── مؤشرات الحالة فوق الفيديو ── */}
       {status === 'ready' && (
         <>
-          <video
-            ref={videoRef}
-            muted
-            playsInline
-            className="w-full h-full object-cover scale-x-[-1]"
-          />
-          <canvas ref={canvasRef} className="hidden" />
-
-          {/* مؤشر الحالة */}
-          <div className={`absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
-            gazeWarning ? 'bg-red-500/80 text-white' : 'bg-emerald-500/80 text-white'
+          {/* حالة الكشف */}
+          <div className={`absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold backdrop-blur-sm ${
+            gazeWarn
+              ? 'bg-red-600/90 text-white'
+              : 'bg-emerald-600/80 text-white'
           }`}>
-            {gazeWarning ? (
-              <><span className="animate-ping w-1.5 h-1.5 rounded-full bg-white inline-block" />تحذير!</>
-            ) : (
-              <><Eye className="w-2.5 h-2.5" />مراقب</>
-            )}
+            {gazeWarn
+              ? <><span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-ping" />تحذير!</>
+              : <><Eye className="w-2.5 h-2.5" />مراقب</>
+            }
+          </div>
+
+          {/* نتيجة الكشف (debug صغير) */}
+          <div className="absolute bottom-1 left-1 text-[8px] text-white/40 font-mono">
+            {debugScore}
           </div>
 
           {/* أيقونة الكاميرا */}
-          <div className="absolute bottom-1.5 right-1.5 bg-black/40 rounded-full p-1">
-            <Camera className="w-3 h-3 text-white/60" />
+          <div className="absolute bottom-1.5 right-1.5 bg-black/40 rounded-full p-0.5">
+            <Camera className="w-3 h-3 text-white/50" />
           </div>
         </>
       )}
