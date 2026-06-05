@@ -219,10 +219,16 @@ export const getPaymentSettings = async (req: Request, res: Response) => {
       let decryptedCreds: PaymentCredentials = {};
       try {
         if (typeof gw.credentials === 'string') {
-          decryptedCreds = JSON.parse(decrypt(gw.credentials));
+          try {
+            decryptedCreds = JSON.parse(decrypt(gw.credentials));
+          } catch (decryptErr) {
+            decryptedCreds = JSON.parse(gw.credentials);
+          }
+        } else if (gw.credentials && typeof gw.credentials === 'object') {
+          decryptedCreds = gw.credentials as any;
         }
       } catch (err) {
-        console.error(`Failed to decrypt credentials for provider ${gw.provider}`);
+        console.error(`Failed to decrypt or parse credentials for provider ${gw.provider}`);
       }
 
       return {
@@ -263,11 +269,18 @@ export const handlePurchase = async (req: Request, res: Response) => {
     let credentials: PaymentCredentials = {};
     try {
       if (typeof activeGateway.credentials === 'string') {
-        credentials = JSON.parse(decrypt(activeGateway.credentials));
+        try {
+          credentials = JSON.parse(decrypt(activeGateway.credentials));
+        } catch (decryptErr) {
+          console.warn('Decryption failed, trying to parse as plain JSON');
+          credentials = JSON.parse(activeGateway.credentials);
+        }
+      } else if (activeGateway.credentials && typeof activeGateway.credentials === 'object') {
+        credentials = activeGateway.credentials as any;
       }
     } catch (err) {
-      console.error('Decryption failed during purchase');
-      return res.status(500).json({ message: 'Error decrypting payment credentials' });
+      console.error('Credentials parsing failed during purchase:', err);
+      return res.status(500).json({ message: 'Error processing payment credentials' });
     }
 
     const transactionId = `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
