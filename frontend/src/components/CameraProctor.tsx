@@ -91,47 +91,59 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             const pts = result.landmarks.positions;
 
             /*
-             * حساب اتجاه الرأس:
-             * نقاط مرجعية:
-             *   0  = حافة الوجه اليسرى
-             *   16 = حافة الوجه اليمنى
-             *   30 = طرف الأنف (أمام)
-             *   8  = الذقن
-             *   27 = جذر الأنف (بين العينين)
-             *
-             * مقياس الدوران الأفقي:
-             *   yaw = (طرف الأنف - مركز الوجه) / نصف عرض الوجه
-             *   قيمة صغيرة = وجه مستقيم
-             *   قيمة كبيرة يمين أو يسار = الرأس بيلتف
-             *
-             * مقياس الإمالة الرأسية:
-             *   pitch = كم انزل الأنف تحت مستوى الذقن
+             * ── حساب YAW (الدوران أفقياً) ──────────────────────────────
+             * مقياس: 0 = مستقيم، 1 = 90°
+             * عتبة التحذير: > 0.28 (زاوية ~25°)
              */
-            const faceLeft  = pts[0].x;
-            const faceRight = pts[16].x;
-            const faceWidth = faceRight - faceLeft;
+            const faceLeft   = pts[0].x;
+            const faceRight  = pts[16].x;
+            const faceWidth  = faceRight - faceLeft;
             const faceCenter = (faceLeft + faceRight) / 2;
-
-            const noseTip = pts[30];
-
-            // الإزاحة الأفقية للأنف عن المركز (مُعيَّرة بعرض الوجه)
+            const noseTip    = pts[30];
             const yaw = Math.abs((noseTip.x - faceCenter) / (faceWidth / 2));
 
-            // الإمالة الرأسية (الأنف ينزل تجاه الذقن = بيبص تحت)
-            const noseY   = noseTip.y;
-            const chinY   = pts[8].y;
-            const browY   = pts[27].y;
-            const faceH   = chinY - browY;
-            const pitch   = (noseY - browY) / faceH; // طبيعي ~0.55، بيبص تحت > 0.75
+            /*
+             * ── حساب PITCH (الإمالة للأسفل) ─────────────────────────────
+             * مقياس: 0 = مستقيم لأسفل، 1 = رأس مرفوع تماماً
+             * عتبة التحذير: > 0.72
+             */
+            const chinY  = pts[8].y;
+            const browY  = pts[27].y;
+            const faceH  = chinY - browY;
+            const pitch  = (noseTip.y - browY) / faceH;
 
-            const direction =
-              yaw > 0.40  ? `يمين/شمال yaw=${yaw.toFixed(2)}`
-            : pitch > 0.75 ? `تحت pitch=${pitch.toFixed(2)}`
-            : `✅ OK y=${yaw.toFixed(2)} p=${pitch.toFixed(2)}`;
+            /*
+             * ── حساب EAR (انضمام العين = بيبص تحت) ───────────────────
+             * العين اليسرى:  36-41   العين اليمنى: 42-47
+             * EAR = (|p2-p6| + |p3-p5|) / (2 * |p1-p4|)
+             * قيمة طبيعية: ~0.27+، انضمام: < 0.20
+             */
+            const eyeH = (p: faceapi.Point, q: faceapi.Point) =>
+              Math.sqrt((p.x - q.x) ** 2 + (p.y - q.y) ** 2);
 
-            setDebugText(direction);
+            const earLeft = (
+              eyeH(pts[37], pts[41]) + eyeH(pts[38], pts[40])
+            ) / (2 * eyeH(pts[36], pts[39]));
 
-            const lookingAway = yaw > 0.40 || pitch > 0.75;
+            const earRight = (
+              eyeH(pts[43], pts[47]) + eyeH(pts[44], pts[46])
+            ) / (2 * eyeH(pts[42], pts[45]));
+
+            const ear = (earLeft + earRight) / 2;
+
+            // تحديد الحالة
+            const headTurned  = yaw > 0.28;
+            const lookingDown = pitch > 0.72;
+            const eyesSquint  = ear < 0.20; // عيون بتتضيق = بيبص تحت
+
+            const lookingAway = headTurned || lookingDown || eyesSquint;
+
+            const dir = headTurned  ? `👁 يمين/شمال y=${yaw.toFixed(2)}`
+                      : lookingDown  ? `👇 تحت p=${pitch.toFixed(2)}`
+                      : eyesSquint   ? `😑 عين ضيقة e=${ear.toFixed(2)}`
+                      : `✅ y=${yaw.toFixed(2)} p=${pitch.toFixed(2)} e=${ear.toFixed(2)}`;
+
+            setDebugText(dir);
 
             if (lookingAway) {
               missedRef.current += 1;
@@ -141,8 +153,8 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             }
           }
 
-          // 4 فريمات (~2 ثانية) → أعطِ تحذير
-          if (missedRef.current >= 4) {
+          // 3 فريمات (~1.5 ثانية) → تحذير (أسرع من قبل)
+          if (missedRef.current >= 3) {
             const now = Date.now();
             if (now - lastWarnRef.current > 5000) {
               lastWarnRef.current = now;
