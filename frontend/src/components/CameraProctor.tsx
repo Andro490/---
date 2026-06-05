@@ -107,14 +107,14 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             const noseToLeft = noseTip.x - faceLeft.x;
             const noseToRight = faceRight.x - noseTip.x;
             const yawRatio = Math.abs(noseToLeft - noseToRight) / (noseToLeft + noseToRight);
-            const headTurned = yawRatio > 0.45; // 0.45 تقريباً تقابل زاوية 45 درجة
+            const headTurned = yawRatio > 0.50; // تقليل الحساسية، يسمح بحركة رأس أكبر
 
             // 2. حساب زاوية النظر للأسفل (Pitch) - للـ 90 درجة للأسفل
             const eyeCenterY = (pts[37].y + pts[44].y) / 2;
             const noseY = pts[30].y;
             const chinY = pts[8].y;
             const pitch = (noseY - eyeCenterY) / (chinY - eyeCenterY);
-            const lookingDown = pitch > 0.8; // قيمة 0.8 تدل على نظر الطالب للأسفل بزاوية حادة
+            const lookingDown = pitch > 0.85; // تقليل الحساسية للنزول للسماح بميل بسيط للرأس دون تحذير
             
             // السماح بالنزول لو بيكتب على الكيبورد (خلال آخر 10 ثواني)
             const isTyping = Date.now() - lastTypingTimeRef.current < 10000;
@@ -135,8 +135,8 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             setDebugText(dir);
           }
 
-          // 4 فريمات متتالية (~ثانية كاملة) علشان يتأكد إنه فعلاً بيبص بره أو وشه غايب
-          if (missedRef.current >= 4) {
+          // نظام تراكمي: 6 فريمات متتالية (~ثانية ونصف) لتجنب الحركات العفوية السريعة
+          if (missedRef.current >= 6) {
             const now = Date.now();
             if (now - lastWarnRef.current > 4000) {
               lastWarnRef.current = now;
