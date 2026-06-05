@@ -1,0 +1,253 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String       @id @default(uuid())
+  email           String       @unique
+  password        String
+  name            String
+  firstName       String?
+  lastName        String?
+  mobile          String?
+  role            String       @default("STUDENT") // "STUDENT" | "ADMIN"
+  specialization  String?
+  bio             String?
+  avatarUrl       String?
+  governorate     String?
+  educationType   String?
+  gradeLevel      String?
+  section         String?
+  activeDeviceId  String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  enrollments     Enrollment[]
+  progresses      Progress[]
+  reviews         Review[]
+  payments        Payment[]
+  quizResults     QuizResult[]
+  homeworkResults HomeworkResult[]
+  supportMessages SupportMessage[]
+  refreshTokens   RefreshToken[]
+}
+
+model Category {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  slug    String   @unique
+  courses Course[]
+}
+
+model Course {
+  id           String       @id @default(uuid())
+  title        String
+  description  String
+  price        Float        @default(0.0)
+  thumbnail    String?
+  categoryId   String
+  category     Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  instructorId String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  lessons      Lesson[]
+  enrollments  Enrollment[]
+  reviews      Review[]
+  payments     Payment[]
+}
+
+model Lesson {
+  id           String     @id @default(uuid())
+  title        String
+  content      String?
+  videoUrl     String?
+  pdfUrl       String?
+  platformType String     @default("youtube") // "youtube" | "secure" | "quiz"
+  libraryId    String?    // Bunny.net Library ID
+  tokenKey     String?    // Bunny.net Token Authentication Key (مخزن بشكل آمن)
+  duration     Int        @default(0) // in seconds
+  courseId     String
+  course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  progresses   Progress[]
+  quiz         Quiz?
+  homework     Homework?
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+}
+
+model Progress {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  rating    Int      @default(5)
+  comment   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  amount        Float
+  status        String   @default("PENDING") // "PENDING" | "SUCCESS" | "FAILED"
+  transactionId String   @unique
+  createdAt     DateTime @default(now())
+}
+
+model Quiz {
+  id          String     @id @default(uuid())
+  title       String
+  passScore   Int        @default(50)
+  type        String     @default("practice") // "practice" | "exam"
+  lessonId    String     @unique
+  lesson      Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  results     QuizResult[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  questionText  String
+  options       String[]
+  correctOption Int
+  points        Int      @default(1)
+  createdAt     DateTime @default(now())
+}
+
+model QuizResult {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  scorePercentage Int
+  passed          Boolean
+  answersJson     String   // Store answers as JSON string
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, quizId])
+}
+
+
+
+model Homework {
+  id          String             @id @default(uuid())
+  title       String
+  passScore   Int                @default(50)
+  lessonId    String             @unique
+  lesson      Lesson             @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions   HomeworkQuestion[]
+  results     HomeworkResult[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model HomeworkQuestion {
+  id            String   @id @default(uuid())
+  homeworkId    String
+  homework      Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  questionText  String
+  options       String[]
+  correctOption Int
+  points        Int      @default(1)
+  createdAt     DateTime @default(now())
+}
+
+model HomeworkResult {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  homeworkId      String
+  homework        Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  scorePercentage Int
+  passed          Boolean
+  answersJson     String
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, homeworkId])
+}
+
+model PaymentGateway {
+  id          String   @id @default(uuid())
+  provider    String   @unique // e.g., "FAWRY", "STRIPE"
+  isActive    Boolean  @default(false)
+  credentials Json
+  updatedAt   DateTime @updatedAt
+}
+
+model Visitor {
+  id        String   @id @default(uuid())
+  visitorId String   @unique
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model SupportMessage {
+  id               String   @id @default(uuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  email            String
+  message          String
+  reply            String?  // Admin's reply
+  isRead           Boolean  @default(false)
+  isDeletedByAdmin Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  token       String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model BlacklistedToken {
+  id        String   @id @default(uuid())
+  jti       String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

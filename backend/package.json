@@ -1,0 +1,48 @@
+{
+  "name": "cinematic-edu-backend",
+  "version": "1.0.0",
+  "description": "Backend for Cinematic Educational Platform",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "prisma generate && tsc --pretty",
+    "start": "prisma migrate deploy && node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio",
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.2",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.24",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^8.0.10",
+    "prisma": "^5.10.2",
+    "stripe": "^22.2.0",
+    "typescript": "^5.3.3",
+    "xlsx": "^0.18.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/multer": "^1.4.13",
+    "@types/nodemailer": "^8.0.0",
+    "ts-node-dev": "^2.0.0"
+  }
+}
