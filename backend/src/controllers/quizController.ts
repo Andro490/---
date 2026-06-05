@@ -151,7 +151,10 @@ export const getQuizByLesson = async (req: Request, res: Response) => {
 
     const isExam = quiz.type === 'exam' || quiz.lesson.platformType === 'exam' || quiz.type === 'dictation' || quiz.lesson.platformType === 'dictation';
 
-    if (isExam && userId) {
+    // التعديل: استثناء الدكتيشن من المنع للتمكن من الاختبار المتكرر (مؤقتاً)
+    const isStrictExam = quiz.type === 'exam' || quiz.lesson.platformType === 'exam';
+
+    if (isStrictExam && userId) {
       const existingResult = await prisma.quizResult.findUnique({
         where: { userId_quizId: { userId, quizId: quiz.id } }
       });
@@ -199,7 +202,8 @@ export const submitQuiz = async (req: Request, res: Response) => {
 
     // منع إعادة الامتحانات النهائية (أو السماح بالمراجعة فقط)
     let isReviewMode = false;
-    if (isExam) {
+    const isStrictExam = quiz.type === 'exam' || quiz.lesson.platformType === 'exam';
+    if (isStrictExam) {
       const existingResult = await prisma.quizResult.findUnique({
         where: {
           userId_quizId: { userId, quizId: quiz.id }

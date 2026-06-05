@@ -118,9 +118,9 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
 
             const ear = (earLeft + earRight) / 2;
 
-            // تحديد الحالة - زودنا الحساسية جداً للأسفل
-            const headTurned  = yaw > 0.25;
-            const lookingDown = pitch > 0.62; // نزلنا دي عشان يلقط النزول الخفيف
+            // تحديد الحالة - حساسية مفرطة جداً
+            const headTurned  = yaw > 0.18;
+            const lookingDown = pitch > 0.58; 
             const eyesSquint  = ear < 0.22; 
 
             const lookingAway = headTurned || lookingDown || eyesSquint;
@@ -132,10 +132,10 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
               setGazeWarn(false);
             }
 
-            const dir = headTurned  ? `👁 يمين/شمال`
-                      : lookingDown  ? `👇 تحت`
-                      : eyesSquint   ? `😑 عين ضيقة`
-                      : `✅ طبيعي`;
+            const dir = headTurned  ? `👁 يمين/شمال y=${yaw.toFixed(2)}`
+                      : lookingDown  ? `👇 تحت p=${pitch.toFixed(2)}`
+                      : eyesSquint   ? `😑 عين ضيقة e=${ear.toFixed(2)}`
+                      : `✅ y=${yaw.toFixed(2)} p=${pitch.toFixed(2)}`;
 
             setDebugText(dir);
           }
