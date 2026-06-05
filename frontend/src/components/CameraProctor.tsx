@@ -122,10 +122,10 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             const faceRatio = faceH / faceWidth;
             const boxRatio = result.detection.box.height / result.detection.box.width;
 
-            // تحديد الحالة - حساسية متوازنة
-            const headTurned  = yaw > 0.22; // يسمح بحركة خفيفة، يمسك الالتفات الواضح
-            const lookingDown = boxRatio < 1.05; // يسمح بالنزول للكيبورد، يمسك النزول الكامل (تحت المكتب)
-            const eyesSquint  = ear < 0.20; 
+            // تحديد الحالة - حساسية منخفضة (عملية ومريحة للطالب)
+            const headTurned  = yaw > 0.35; // لازم يلف وشه بوضوح يمين أو شمال
+            const lookingDown = boxRatio < 0.95; // لازم يوطي راسه قوي جداً
+            const eyesSquint  = ear < 0.18; // لازم يقفل عينه تقريبا
 
             const lookingAway = headTurned || lookingDown || eyesSquint;
 
@@ -144,8 +144,8 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             setDebugText(dir);
           }
 
-          // 2 فريم متتالي (~نصف ثانية) لتجنب التحذيرات الخاطئة (Glitches)
-          if (missedRef.current >= 2) {
+          // 3 فريمات متتالية (~ثانية إلا ربع) علشان يتأكد إنه فعلاً بيبص بره مش مجرد حركة عابرة
+          if (missedRef.current >= 3) {
             const now = Date.now();
             if (now - lastWarnRef.current > 4000) {
               lastWarnRef.current = now;
