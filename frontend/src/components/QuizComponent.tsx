@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { CheckCircle, XCircle, Award, RefreshCw, Maximize, ShieldAlert, Lock, Trophy, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Award, RefreshCw, Maximize, ShieldAlert, Lock, Trophy, Clock, Camera, CameraOff } from 'lucide-react';
 import { useQuizSecurity } from '../hooks/useQuizSecurity';
 import CameraProctor from './CameraProctor';
 
@@ -60,6 +60,11 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
   // ─── حالة بدء الاختبار ───────────────────────────────────────────────────
   // في وضع المراجعة نتجاوز شاشة البداية مباشرةً
   const [quizStarted, setQuizStarted] = useState(!!reviewAnswers);
+
+  // ─── خطوة الكاميرا (exam / dictation فقط) ───────────────────────────────
+  // 'idle' → لم يُطلب بعد | 'requesting' → بانتظار الإذن | 'granted' | 'denied'
+  const [cameraStep, setCameraStep] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
+  const [isRequestingCamera, setIsRequestingCamera] = useState(false);
   
   // ─── المؤقت ─────────────────────────────────────────────────────────────
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -156,9 +161,22 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
   });
 
   // ─── بدء الاختبار (يُربط بزر "ابدأ الاختبار") ────────────────────────────
+  const requestCameraAndStart = async () => {
+    setIsRequestingCamera(true);
+    setCameraStep('requesting');
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      setCameraStep('granted');
+    } catch {
+      setCameraStep('denied');
+    } finally {
+      setIsRequestingCamera(false);
+    }
+  };
+
   const handleStartQuiz = () => {
     if (isExam) {
-      startQuiz();         // يفتح ملء الشاشة ويبدأ المراقبة
+      startQuiz();         // يبدأ المراقبة
     }
     setQuizStarted(true);
     // تفعيل المؤقت فقط في حالة تسميع الكلمات بـ 10 دقائق (600 ثانية)
@@ -166,6 +184,14 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
       setTimeLeft(10 * 60);
     }
   };
+
+  // بعد منح الإذن أو رفضه → ابدأ الاختبار مباشرةً
+  useEffect(() => {
+    if (cameraStep === 'granted' || cameraStep === 'denied') {
+      handleStartQuiz();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraStep]);
 
   // معالجة المؤقت
   useEffect(() => {
@@ -403,6 +429,63 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
 
   // ─── شاشة البداية ────────────────────────────────────────────────────────
   if (!quizStarted) {
+    // ── خطوة طلب الكاميرا (للامتحان النهائي والتسميع فقط) ──
+    if (isExam && cameraStep === 'idle') {
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[440px] bg-slate-950 rounded-xl border border-white/5 shadow-glow-purple p-8 gap-6 text-center" dir="rtl">
+
+          {/* أيقونة الكاميرا */}
+          <div className="w-24 h-24 rounded-full bg-theme-neonCyan/10 border-2 border-theme-neonCyan/40 flex items-center justify-center animate-pulse">
+            <Camera className="w-12 h-12 text-theme-neonCyan" />
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">مطلوب وصول للكاميرا 📷</h2>
+            <p className="text-slate-400 text-sm max-w-xs">
+              هذا الاختبار يتطلب تشغيل الكاميرا لمراقبة الطالب وضمان نزاهة الامتحان.
+              سيطلب المتصفح إذنك — اضغط <strong className="text-white">"Allow / السماح"</strong> عند ظهور النافذة.
+            </p>
+          </div>
+
+          {/* تعليمة بصرية */}
+          <div className="bg-slate-900 border border-theme-neonCyan/20 rounded-xl p-4 max-w-sm text-right space-y-2">
+            <p className="text-theme-neonCyan font-semibold text-sm">📌 كيف تسمح بالكاميرا؟</p>
+            <p className="text-slate-300 text-sm">① سيظهر مربع أذونات أعلى المتصفح</p>
+            <p className="text-slate-300 text-sm">② اضغط على <span className="text-green-400 font-bold">Allow / السماح</span></p>
+            <p className="text-slate-300 text-sm">③ ستبدأ الكاميرا وينطلق الاختبار تلقائياً</p>
+          </div>
+
+          {/* زر الطلب */}
+          <button
+            onClick={requestCameraAndStart}
+            disabled={isRequestingCamera}
+            className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-theme-neonCyan to-emerald-400 text-slate-900 rounded-xl text-lg font-bold shadow-glow-cyan hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-60 disabled:cursor-wait"
+          >
+            {isRequestingCamera ? (
+              <>
+                <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                جاري طلب الإذن...
+              </>
+            ) : (
+              <>
+                <Camera className="w-5 h-5" />
+                السماح بالكاميرا وبدء الاختبار
+              </>
+            )}
+          </button>
+
+          {/* زر تخطي (لو مش عنده كاميرا) */}
+          <button
+            onClick={() => setCameraStep('denied')}
+            className="text-slate-500 hover:text-slate-300 text-xs underline transition-colors"
+          >
+            ليس لديّ كاميرا — ابدأ بدونها
+          </button>
+        </div>
+      );
+    }
+
+    // ── شاشة البداية العادية (بعد الكاميرا أو للكويز العادي) ──
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[400px] bg-slate-950 rounded-xl border border-white/5 shadow-glow-purple p-8 gap-6 text-center" dir="rtl">
         {/* أيقونة */}
@@ -429,6 +512,12 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
           <p className="text-slate-300 text-sm">👁️ أي تبديل للتبويبات سيُسجَّل كمحاولة غش</p>
           <p className="text-slate-300 text-sm">⚠️ بعد 3 تحذيرات سيُسلَّم الاختبار تلقائياً</p>
           <p className="text-slate-300 text-sm">🚫 النسخ واللصق وأدوات المطوّر معطّلة</p>
+          {cameraStep === 'denied' && (
+            <p className="text-orange-400 text-sm flex items-center gap-1 justify-end">
+              <CameraOff className="w-3.5 h-3.5" />
+              الكاميرا غير مفعّلة — سيعمل نظام المراقبة بدونها
+            </p>
+          )}
         </div>
 
         {/* زر البدء */}
@@ -438,7 +527,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
           className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-theme-accent to-theme-neonCyan text-slate-900 rounded-xl text-lg font-bold shadow-glow-cyan hover:scale-105 active:scale-95 transition-all duration-300"
         >
           <Maximize className="w-5 h-5" />
-          ابدأ الاختبار
+          ابدأ الاختبار الآن
         </button>
       </div>
     );
