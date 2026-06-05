@@ -172,6 +172,12 @@ export const getQuizByLesson = async (req: Request, res: Response) => {
     if (isExam) quiz.type = 'exam';
     if (quiz.lesson.platformType === 'dictation') quiz.type = 'dictation';
 
+    // التسميع: اختيار 5 أسئلة عشوائية فقط للطالب
+    if (quiz.type === 'dictation') {
+      const shuffled = [...quiz.questions].sort(() => 0.5 - Math.random());
+      quiz.questions = shuffled.slice(0, 5);
+    }
+
     res.status(200).json({ quiz, alreadyTaken, previousResult });
   } catch (error: any) {
     console.error('Error fetching quiz:', error);
@@ -182,7 +188,7 @@ export const getQuizByLesson = async (req: Request, res: Response) => {
 export const submitQuiz = async (req: Request, res: Response) => {
   try {
     const { lessonId } = req.params;
-    const { answers } = req.body; // { [questionId]: selectedOptionIndex }
+    const { answers, askedQuestionIds } = req.body; // { [questionId]: selectedOptionIndex }
     const userId = (req as any).user?.userId;
 
     if (!userId) {
@@ -215,9 +221,14 @@ export const submitQuiz = async (req: Request, res: Response) => {
       }
     }
 
+    let questionsToGrade = quiz.questions;
+    if (askedQuestionIds && Array.isArray(askedQuestionIds)) {
+      questionsToGrade = quiz.questions.filter(q => askedQuestionIds.includes(q.id));
+    }
+
     let totalPoints = 0;
     let earnedPoints = 0;
-    const results = quiz.questions.map((q) => {
+    const results = questionsToGrade.map((q) => {
       totalPoints += q.points;
       const selectedOption = answers[q.id];
       let isCorrect = false;

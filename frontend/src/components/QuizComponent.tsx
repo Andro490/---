@@ -125,7 +125,11 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
     if (!quiz) return;
     setIsSubmitting(true);
     try {
-      const res = await api.post(`/courses/lessons/${lessonId}/quiz/submit`, { answers: answersToSubmit });
+      const payload = {
+        answers: answersToSubmit,
+        askedQuestionIds: quiz.questions.map((q: Question) => q.id)
+      };
+      const res = await api.post(`/courses/lessons/${lessonId}/quiz/submit`, payload);
       setResult(res.data);
       const isExamType = quiz.type === 'exam' || quiz.type === 'dictation';
       if ((res.data.passed || isExamType) && onQuizComplete && !reviewAnswers) {
