@@ -21,6 +21,16 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
   const lastWarnRef = useRef(0);
   const onLookRef   = useRef(onLookAway);
   onLookRef.current = onLookAway;
+  const lastTypingTimeRef = useRef(0);
+
+  // ── تسجيل وقت الكتابة ──
+  useEffect(() => {
+    const handleKeyDown = () => {
+      lastTypingTimeRef.current = Date.now();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const [phase, setPhase]         = useState<'init' | 'ready' | 'error'>('init');
   const [errorMsg, setErrorMsg]   = useState('');
@@ -124,7 +134,11 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
 
             // تحديد الحالة - حساسية منخفضة (عملية ومريحة للطالب)
             const headTurned  = yaw > 0.35; // لازم يلف وشه بوضوح يمين أو شمال
-            const lookingDown = boxRatio < 0.95; // لازم يوطي راسه قوي جداً
+            
+            // السماح بالنزول لو بيكتب على الكيبورد (خلال آخر 10 ثواني)
+            const isTyping = Date.now() - lastTypingTimeRef.current < 10000;
+            const lookingDown = !isTyping && (boxRatio < 0.95); 
+            
             const eyesSquint  = ear < 0.18; // لازم يقفل عينه تقريبا
 
             const lookingAway = headTurned || lookingDown || eyesSquint;
@@ -138,6 +152,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
 
             const dir = headTurned  ? `👁 يمين/شمال y=${yaw.toFixed(2)}`
                       : lookingDown  ? `👇 تحت b=${boxRatio.toFixed(2)}`
+                      : isTyping && (boxRatio < 0.95) ? `⌨️ يكتب الآن`
                       : eyesSquint   ? `😑 عين ضيقة e=${ear.toFixed(2)}`
                       : `✅ طبيعي y=${yaw.toFixed(2)} b=${boxRatio.toFixed(2)}`;
 
