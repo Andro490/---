@@ -86,15 +86,11 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
 
           if (!result) {
             missedRef.current += 1;
-            setDebugText('❌ لا وجه');
+            setDebugText(`❌ لا وجه`);
           } else {
             const pts = result.landmarks.positions;
 
-            /*
-             * ── حساب YAW (الدوران أفقياً) ──────────────────────────────
-             * مقياس: 0 = مستقيم، 1 = 90°
-             * عتبة التحذير: > 0.28 (زاوية ~25°)
-             */
+            // ── حساب YAW ──
             const faceLeft   = pts[0].x;
             const faceRight  = pts[16].x;
             const faceWidth  = faceRight - faceLeft;
@@ -102,22 +98,13 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
             const noseTip    = pts[30];
             const yaw = Math.abs((noseTip.x - faceCenter) / (faceWidth / 2));
 
-            /*
-             * ── حساب PITCH (الإمالة للأسفل) ─────────────────────────────
-             * مقياس: 0 = مستقيم لأسفل، 1 = رأس مرفوع تماماً
-             * عتبة التحذير: > 0.72
-             */
+            // ── حساب PITCH ──
             const chinY  = pts[8].y;
             const browY  = pts[27].y;
             const faceH  = chinY - browY;
             const pitch  = (noseTip.y - browY) / faceH;
 
-            /*
-             * ── حساب EAR (انضمام العين = بيبص تحت) ───────────────────
-             * العين اليسرى:  36-41   العين اليمنى: 42-47
-             * EAR = (|p2-p6| + |p3-p5|) / (2 * |p1-p4|)
-             * قيمة طبيعية: ~0.27+، انضمام: < 0.20
-             */
+            // ── حساب EAR ──
             const eyeH = (p: faceapi.Point, q: faceapi.Point) =>
               Math.sqrt((p.x - q.x) ** 2 + (p.y - q.y) ** 2);
 
@@ -131,19 +118,12 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
 
             const ear = (earLeft + earRight) / 2;
 
-            // تحديد الحالة
-            const headTurned  = yaw > 0.28;
-            const lookingDown = pitch > 0.72;
-            const eyesSquint  = ear < 0.20; // عيون بتتضيق = بيبص تحت
+            // تحديد الحالة - زودنا الحساسية شوية
+            const headTurned  = yaw > 0.25;
+            const lookingDown = pitch > 0.70;
+            const eyesSquint  = ear < 0.22; 
 
             const lookingAway = headTurned || lookingDown || eyesSquint;
-
-            const dir = headTurned  ? `👁 يمين/شمال y=${yaw.toFixed(2)}`
-                      : lookingDown  ? `👇 تحت p=${pitch.toFixed(2)}`
-                      : eyesSquint   ? `😑 عين ضيقة e=${ear.toFixed(2)}`
-                      : `✅ y=${yaw.toFixed(2)} p=${pitch.toFixed(2)} e=${ear.toFixed(2)}`;
-
-            setDebugText(dir);
 
             if (lookingAway) {
               missedRef.current += 1;
@@ -151,12 +131,19 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
               missedRef.current = 0;
               setGazeWarn(false);
             }
+
+            const dir = headTurned  ? `👁 يمين/شمال`
+                      : lookingDown  ? `👇 تحت`
+                      : eyesSquint   ? `😑 عين ضيقة`
+                      : `✅ طبيعي`;
+
+            setDebugText(dir);
           }
 
-          // 3 فريمات (~1.5 ثانية) → تحذير (أسرع من قبل)
-          if (missedRef.current >= 3) {
+          // بمجرد ما يلتفت مرة واحدة (فوري) -> تحذير
+          if (missedRef.current >= 1) {
             const now = Date.now();
-            if (now - lastWarnRef.current > 5000) {
+            if (now - lastWarnRef.current > 4000) {
               lastWarnRef.current = now;
               missedRef.current   = 0;
               setGazeWarn(true);
@@ -169,7 +156,7 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
         } catch (e) {
           console.warn('[CameraProctor] detect:', e);
         }
-      }, 500);
+      }, 250);
     };
 
     run();
