@@ -62,5 +62,6 @@ export const siteConfig = {
   // 📌 8. إعدادات السيرفر والـ API
   // ⚠️ هام جداً: عند نقل الموقع لاستضافة جديدة، قم بتغيير هذا الرابط إلى رابط الباك إند الجديد
   api: {
- baseUrl: import.meta.env.VITE_API_URL || "https://backend-production-a4c41.up.railway.app/api",  }
+    baseUrl: import.meta.env.VITE_API_URL || "https://ravishing-dedication-production-b753.up.railway.app/api",
+  },
 };

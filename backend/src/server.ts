@@ -55,10 +55,8 @@ app.use(helmet({
 
 // ✅ إعدادات الـ CORS — يقبل كل نطاقات Vercel + localhost تلقائياً
 const allowedOrigins = [
-  // ✅ النطاق الإنتاجي الثابت (عدّله إذا غيّرت اسم المشروع)
-  'https://portofa.vercel.app',
-  // ✅ النطاق الجديد (my-frontend-app)
-  'https://my-frontend-app.kappa.vercel.app',
+  // ✅ الفرونت إند الإنتاجي الحالي
+  'https://my-frontend-app-kappa.vercel.app',
   // ✅ بيئة التطوير المحلية
   'http://localhost:5173',
   'http://localhost:3000',
