@@ -100,48 +100,29 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
           } else {
             const pts = result.landmarks.positions;
 
-            // ── حساب YAW ──
-            const faceLeft   = pts[0].x;
-            const faceRight  = pts[16].x;
-            const faceWidth  = faceRight - faceLeft;
-            const faceCenter = (faceLeft + faceRight) / 2;
-            const noseTip    = pts[30];
-            const yaw = Math.abs((noseTip.x - faceCenter) / (faceWidth / 2));
+            // ── حساب اتجاه الأنف (لمعرفة الالتفات يمين وشمال) ──
+            const noseLeft   = pts[31].x; // الفتحة الشمال
+            const noseRight  = pts[35].x; // الفتحة اليمين
+            const noseTipX   = pts[30].x; // أرنبة الأنف
+            const noseWidth  = noseRight - noseLeft;
+            const noseCenter = (noseLeft + noseRight) / 2;
+            
+            // نسبة انحراف أرنبة الأنف عن المركز (0 = مستقيم، 1 = أرنبة الأنف فوق الفتحة بالظبط)
+            const noseTurn = Math.abs(noseTipX - noseCenter) / (noseWidth / 2);
 
-            // ── حساب PITCH ──
-            const chinY  = pts[8].y;
-            const browY  = pts[27].y;
-            const faceH  = chinY - browY;
-            const pitch  = (noseTip.y - browY) / faceH;
-
-            // ── حساب EAR ──
-            const eyeH = (p: faceapi.Point, q: faceapi.Point) =>
-              Math.sqrt((p.x - q.x) ** 2 + (p.y - q.y) ** 2);
-
-            const earLeft = (
-              eyeH(pts[37], pts[41]) + eyeH(pts[38], pts[40])
-            ) / (2 * eyeH(pts[36], pts[39]));
-
-            const earRight = (
-              eyeH(pts[43], pts[47]) + eyeH(pts[44], pts[46])
-            ) / (2 * eyeH(pts[42], pts[45]));
-
-            const ear = (earLeft + earRight) / 2;
-
-            // ── حساب نسب الوجه ككل (مفيدة لمعرفة الميل للأسفل) ──
-            const faceRatio = faceH / faceWidth;
+            // ── حساب نسب الوجه ككل (لمعرفة الميل للأسفل) ──
+            const faceH = pts[8].y - pts[27].y;
+            const faceWidth = pts[16].x - pts[0].x;
             const boxRatio = result.detection.box.height / result.detection.box.width;
 
-            // تحديد الحالة - حساسية منخفضة (عملية ومريحة للطالب)
-            const headTurned  = yaw > 0.35; // لازم يلف وشه بوضوح يمين أو شمال
+            // تحديد الحالة - حساسية مبنية على الأنف (زي ما طلبت)
+            const headTurned  = noseTurn > 0.85; // لو أرنبة الأنف عدت الفتحة (باين فتحة واحدة)
             
             // السماح بالنزول لو بيكتب على الكيبورد (خلال آخر 10 ثواني)
             const isTyping = Date.now() - lastTypingTimeRef.current < 10000;
             const lookingDown = !isTyping && (boxRatio < 0.95); 
-            
-            const eyesSquint  = ear < 0.18; // لازم يقفل عينه تقريبا
 
-            const lookingAway = headTurned || lookingDown || eyesSquint;
+            const lookingAway = headTurned || lookingDown;
 
             if (lookingAway) {
               missedRef.current += 1;
@@ -150,11 +131,10 @@ const CameraProctor: React.FC<CameraProctorProps> = ({ onLookAway, enabled }) =>
               setGazeWarn(false);
             }
 
-            const dir = headTurned  ? `👁 يمين/شمال y=${yaw.toFixed(2)}`
+            const dir = headTurned  ? `👁 يمين/شمال n=${noseTurn.toFixed(2)}`
                       : lookingDown  ? `👇 تحت b=${boxRatio.toFixed(2)}`
                       : isTyping && (boxRatio < 0.95) ? `⌨️ يكتب الآن`
-                      : eyesSquint   ? `😑 عين ضيقة e=${ear.toFixed(2)}`
-                      : `✅ طبيعي y=${yaw.toFixed(2)} b=${boxRatio.toFixed(2)}`;
+                      : `✅ طبيعي n=${noseTurn.toFixed(2)} b=${boxRatio.toFixed(2)}`;
 
             setDebugText(dir);
           }
