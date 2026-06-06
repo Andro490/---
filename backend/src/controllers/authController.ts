@@ -78,6 +78,8 @@ export const register = async (req: Request, res: Response) => {
 
     res.status(201).json({
       message: 'User registered successfully',
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         name: user.name,
@@ -159,6 +161,8 @@ export const login = async (req: Request, res: Response) => {
     console.log("✅ تم تسجيل الدخول بنجاح للمستخدم:", user.email);
     res.status(200).json({
       message: 'Login successful',
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         name: user.name,
@@ -182,7 +186,8 @@ export const login = async (req: Request, res: Response) => {
 export const refresh = async (req: Request, res: Response) => {
   try {
     // 🍪 قراءة الـ Refresh Token من الكوكيز بدلاً من الـ body لقفل الثغرة
-    const refreshToken = req.cookies?.refreshToken;
+    // ✅ تحديث للآيفون (Safari): استخدام الـ body كبديل إذا منع المتصفح الكوكيز
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (!refreshToken) {
       return res.status(400).json({ message: 'Refresh token is required' });
     }
@@ -227,7 +232,11 @@ export const refresh = async (req: Request, res: Response) => {
     res.cookie('accessToken', newAccessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
     res.cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-    res.status(200).json({ message: 'Token refreshed successfully' });
+    res.status(200).json({ 
+      message: 'Token refreshed successfully',
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    });
   } catch (error: any) {
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }

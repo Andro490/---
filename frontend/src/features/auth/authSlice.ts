@@ -38,9 +38,9 @@ export const registerUser = createAsyncThunk(
     try {
       const payload = { ...userData, deviceId: getVisitorId() };
       const response = await api.post('/auth/register', payload);
-      const { user } = response.data;
-      // نسجل علامة بسيطة في IndexedDB أن المستخدم مسجل دخول (للاستفادة منها في loadMe)
-      await authDB.setToken('accessToken', 'cookie-based');
+      const { user, accessToken, refreshToken } = response.data;
+      if (accessToken) await authDB.setToken('accessToken', accessToken);
+      if (refreshToken) await authDB.setToken('refreshToken', refreshToken);
       return user;
     } catch (error: any) {
       if (!error.response || error.response.status >= 500) {
@@ -57,9 +57,9 @@ export const loginUser = createAsyncThunk(
     try {
       const payload = { ...userData, deviceId: getVisitorId() };
       const response = await api.post('/auth/login', payload);
-      const { user } = response.data;
-      // نسجل علامة بسيطة في IndexedDB أن المستخدم مسجل دخول (للاستفادة منها في loadMe)
-      await authDB.setToken('accessToken', 'cookie-based');
+      const { user, accessToken, refreshToken } = response.data;
+      if (accessToken) await authDB.setToken('accessToken', accessToken);
+      if (refreshToken) await authDB.setToken('refreshToken', refreshToken);
       return user;
     } catch (error: any) {
       if (!error.response || error.response.status >= 500) {
@@ -89,12 +89,17 @@ export const loadMe = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const token = await authDB.getToken('accessToken');
+      // إذا مفيش توكن خالص → مش مسجل دخول
       if (!token) return rejectWithValue('No token found');
       
       const response = await api.get('/auth/me');
       return response.data;
     } catch (error: any) {
-      await authDB.clearAuth();
+      // ✅ iOS Fix: لو السيرفر رفض التوكن (401) بعد محاولة التجديد، امسح البيانات
+      // لكن لو كان خطأ في الشبكة فقط (Network Error)، لا تمسح حتى لا يتم تسجيل الخروج
+      if (error.response) {
+        await authDB.clearAuth();
+      }
       return rejectWithValue(error.response?.data?.message || 'انتهت الجلسة');
     }
   }

@@ -24,11 +24,26 @@ const api = axios.create({
   withCredentials: true, 
 });
 
+import { authDB } from '../database/authDB';
+
 // تعريف أنواع للتحكم في الطلبات المعلقة أثناء التجديد
 interface FailedRequest {
   resolve: (value?: unknown) => void;
   reject: (reason?: unknown) => void;
 }
+
+// إضافة معترض للطلبات لدمج الـ Access Token من IndexedDB إذا فشلت الكوكيز
+api.interceptors.request.use(async (config) => {
+  try {
+    const token = await authDB.getToken('accessToken');
+    if (token && token !== 'cookie-based') {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    // Ignore error
+  }
+  return config;
+}, (error) => Promise.reject(error));
 
 interface RefreshRequestConfig extends AxiosRequestConfig {
   _retry?: boolean;
@@ -89,8 +104,21 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        // قراءة الـ Refresh Token من قاعدة البيانات المحلية ليكون كبديل للكوكيز على أجهزة آيفون
+        const storedRefreshToken = await authDB.getToken('refreshToken');
+        
         // 🍪 طلب تحديث التوكنز
-        await api.post('/auth/refresh');
+        const response = await api.post('/auth/refresh', {
+          refreshToken: storedRefreshToken && storedRefreshToken !== 'cookie-based' ? storedRefreshToken : undefined
+        });
+
+        // حفظ التوكنز الجديدة
+        if (response.data.accessToken) {
+          await authDB.setToken('accessToken', response.data.accessToken);
+        }
+        if (response.data.refreshToken) {
+          await authDB.setToken('refreshToken', response.data.refreshToken);
+        }
 
         processQueue(null);
         isRefreshing = false;
