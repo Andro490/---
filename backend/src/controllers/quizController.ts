@@ -162,6 +162,21 @@ export const getQuizByLesson = async (req: Request, res: Response) => {
           passed: existingResult.passed,
           submittedAt: existingResult.createdAt
         };
+        // If it's a dictation and we have answers, we should filter the questions to only the ones answered
+        if (quiz.type === 'dictation' || quiz.lesson.platformType === 'dictation') {
+          if (existingResult.answersJson) {
+            try {
+              const answers = JSON.parse(existingResult.answersJson);
+              const answeredIds = Object.keys(answers);
+              if (answeredIds.length > 0) {
+                // Attach the answered question IDs to the quiz object so we can use it later
+                (quiz as any).answeredQuestionIds = answeredIds;
+              }
+            } catch (e) {
+              console.error('Failed to parse answersJson', e);
+            }
+          }
+        }
       }
     }
 
@@ -169,10 +184,15 @@ export const getQuizByLesson = async (req: Request, res: Response) => {
     if (isExam) quiz.type = 'exam';
     if (quiz.lesson.platformType === 'dictation') quiz.type = 'dictation';
 
-    // التسميع: اختيار 5 أسئلة عشوائية فقط للطالب
+    // التسميع: اختيار 5 أسئلة عشوائية فقط للطالب (إذا لم يكن هناك أسئلة مُجابة مسبقاً)
     if (quiz.type === 'dictation') {
-      const shuffled = [...quiz.questions].sort(() => 0.5 - Math.random());
-      quiz.questions = shuffled.slice(0, 5);
+      if ((quiz as any).answeredQuestionIds && (quiz as any).answeredQuestionIds.length > 0) {
+        // Return only the questions the student actually answered
+        quiz.questions = quiz.questions.filter((q: any) => (quiz as any).answeredQuestionIds.includes(q.id));
+      } else {
+        const shuffled = [...quiz.questions].sort(() => 0.5 - Math.random());
+        quiz.questions = shuffled.slice(0, 5);
+      }
     }
 
     res.status(200).json({ quiz, alreadyTaken, previousResult });
