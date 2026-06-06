@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { CheckCircle, XCircle, Award, RefreshCw, Maximize, ShieldAlert, Lock, Trophy, Clock, Camera, CameraOff } from 'lucide-react';
+import { CheckCircle, XCircle, Award, RefreshCw, Maximize, ShieldAlert, Lock, Trophy, Clock, Camera, CameraOff, ArrowLeft } from 'lucide-react';
 import { useQuizSecurity } from '../hooks/useQuizSecurity';
 import CameraProctor from './CameraProctor';
 
@@ -41,10 +41,11 @@ interface PreviousResult {
 interface QuizComponentProps {
   lessonId: string;
   onQuizComplete?: () => void;
+  onNextLesson?: () => void;
   reviewAnswers?: Record<string, number | string>;
 }
 
-const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponentProps) => {
+const QuizComponent = ({ lessonId, onQuizComplete, onNextLesson, reviewAnswers }: QuizComponentProps) => {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -408,7 +409,7 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
           </div>
         )}
 
-        <div className="mt-8 pt-4 border-t border-slate-300 dark:border-white/10 flex justify-center">
+        <div className="mt-8 pt-4 border-t border-slate-300 dark:border-white/10 flex justify-center gap-3 flex-wrap">
           {/* زر الإعادة: متاح فقط للكويز العادي (practice) */}
           {!reviewAnswers && quiz.type !== 'exam' && quiz.type !== 'dictation' && (
             <button
@@ -419,11 +420,22 @@ const QuizComponent = ({ lessonId, onQuizComplete, reviewAnswers }: QuizComponen
               إعادة الاختبار
             </button>
           )}
-          {/* للامتحان النهائي والتسميع: رسالة قفل */}
+          {/* للامتحان النهائي والتسميع: زر الدرس التالي + رسالة قفل */}
           {!reviewAnswers && (quiz.type === 'exam' || quiz.type === 'dictation') && result && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm font-semibold">
-              <Lock className="w-4 h-4" />
-              هذا الاختبار لا يمكن إعادته
+            <div className="flex flex-col items-center gap-3 w-full">
+              {onNextLesson && (
+                <button
+                  onClick={onNextLesson}
+                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-theme-accent to-theme-neonCyan text-slate-900 rounded-xl font-bold shadow-glow-cyan hover:scale-105 active:scale-95 transition-all duration-300"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  الدرس التالي
+                </button>
+              )}
+              <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm font-semibold">
+                <Lock className="w-4 h-4" />
+                هذا الاختبار لا يمكن إعادته
+              </div>
             </div>
           )}
         </div>

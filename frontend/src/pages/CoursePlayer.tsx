@@ -182,6 +182,17 @@ const CoursePlayer = () => {
     }
   };
 
+  // ─── الانتقال للدرس التالي تلقائياً بعد الاختبار ─────────────────────────
+  const handleGoToNextLesson = () => {
+    if (!currentCourse?.lessons || !activeLessonId) return;
+    const currentIdx = currentCourse.lessons.findIndex(l => l.id === activeLessonId);
+    const nextLesson = currentCourse.lessons[currentIdx + 1];
+    if (nextLesson) {
+      setActiveLessonId(nextLesson.id);
+      setSearchParams({ lesson: nextLesson.id });
+    }
+  };
+
   return (
     <div className="relative z-10 min-h-screen pt-16 md:pt-24 pb-12 px-3 sm:px-6 max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 rtl">
       {/* Back to Course details bar */}
@@ -224,6 +235,7 @@ const CoursePlayer = () => {
                     key={activeLesson.id} 
                     lessonId={activeLesson.id} 
                     onQuizComplete={handleVideoFinished} 
+                    onNextLesson={handleGoToNextLesson}
                     reviewAnswers={activeLesson.id === reviewQuizId && !isHomework ? reviewAnswers : undefined}
                   />
                 </div>
